@@ -1,0 +1,52 @@
+input::-webkit-input-placeholder {
+	text-align: right;
+}
+
+input {
+	text-align: right;
+}
+
+/* Topic */
+h2.topic-title {
+	display: flex;
+	align-items: center;
+	margin-top: 0.5rem;
+}
+
+h2.topic-title>i {
+	margin-right: 1rem;
+	margin-top: -1rem;
+}
+
+.dialog-menu {
+	margin-left: auto;
+	margin-right: auto;
+	width: fit-content;
+	padding-left: 0;
+	margin-bottom: 0;
+	margin-top: 2rem
+}
+
+a:not([href]):not([tabindex]) {
+	color: #999;
+	text-decoration: none
+}
+
+a:not([href]):not([tabindex]):hover {
+	color: #209CEE;
+}
+
+/* Footer */
+footer {
+	margin-top: 3em;
+	/* position: fixed; */
+	left: 0;
+	bottom: 0;
+	width: 100%;
+	text-align: center;
+}
+
+footer a {
+	color: #333;
+	text-decoration: none;
+}
