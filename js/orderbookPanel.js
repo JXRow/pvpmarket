@@ -76,7 +76,9 @@ const orderbookPanel = createApp({
 			usdtSymbol, memeSymbol, orders, 
 			buyPrice, buyAmount, buyTotal,
 			sellPrice, sellAmount, sellTotal,
-			onInput, onSellBtn, onBuyBtn
+			onInput, onSellBtn, onBuyBtn, 
+			toPrecision: util.toPrecision,
+			maxPrecision: util.maxPrecision
 		}
 	}
 }).mount('#orderbookPanel')
@@ -88,22 +90,53 @@ async function updateView() {
 	
 	if (model.sellOrders.length == 0 || model.buyOrders.length == 0) return
 
-	let _sellOrders = model.sellOrders.concat()
+	//combine the same price orders 
+	let _copyArr = model.sellOrders.concat()
+	let _sellOrders = []
+	for (let a = 0; a < _copyArr.length; a++) {
+		let orderA = _copyArr[a]
+		let copy = Object.assign({}, orderA)
+		let priceA = util.maxPrecision(orderA.price, 6)
+		
+		for (let b = a + 1; b < _copyArr.length; b++) {
+			let orderB = _copyArr[b]
+			let priceB = util.maxPrecision(orderB.price, 6)
+			if (priceA == priceB) {
+				copy.amount += orderB.amount
+				copy.total += orderB.total
+				_copyArr.splice(b, 1)
+				b--
+			}
+		}
+		_sellOrders.push(copy)
+	}
 	if (_sellOrders.length > 6) _sellOrders.length = 6
-	let _buyOrders = model.buyOrders.concat()
+	
+	_copyArr = model.buyOrders.concat()
+	let _buyOrders = []
+	for (let a = 0; a < _copyArr.length; a++) {
+		let orderA = _copyArr[a]
+		let copy = Object.assign({}, orderA)
+		let priceA = util.maxPrecision(orderA.price, 6)
+		
+		for (let b = a + 1; b < _copyArr.length; b++) {
+			let orderB = _copyArr[b]
+			let priceB = util.maxPrecision(orderB.price, 6)
+			if (priceA == priceB) {
+				copy.amount += orderB.amount
+				copy.total += orderB.total
+				_copyArr.splice(b, 1)
+				b--
+			}
+		}
+		_buyOrders.push(copy)
+	}
 	if (_buyOrders.length > 6) _buyOrders.length = 6
 
-	let average = { price: (_sellOrders[0].price + _buyOrders[0].price) / 2, amount: '', total: '' }
+	let average = { price: (parseFloat(_sellOrders[0].price) + parseFloat(_buyOrders[0].price)) / 2, amount: '', total: '' }
 	_sellOrders.reverse()
 	let orders = _sellOrders.concat(_buyOrders)
 	_sellOrders.reverse()
-
-	orders.forEach(function(order) {
-		order.price = util.toPrecision(order.price, 6)
-		order.amount = util.toPrecision(order.amount, 6)
-		order.total = util.toPrecision(order.total, 6)
-	})
-	average.price =  util.maxPrecision(average.price, 6)
 	orders.splice(_sellOrders.length, 0, average)
 
 	orderbookPanel.orders = orders
@@ -147,8 +180,9 @@ async function placeSellOrder(memeIn, usdtWant) {
 		filled: '0%'
 	}
 	pendingOrder.price = pendingOrder.total / pendingOrder.amount
+	
+	model.unwatchEvents()
 	myOrderPanel.insertPendingOrder(pendingOrder)
-
 	await model.publicClient.waitForTransactionReceipt({ confirmations, hash })
 	model.getChanges()
 }
@@ -186,8 +220,9 @@ async function placeBuyOrder(usdtIn, memeWant) {
 		filled: '0%'
 	}
 	pendingOrder.price = pendingOrder.total / pendingOrder.amount
+	
+	model.unwatchEvents()
 	myOrderPanel.insertPendingOrder(pendingOrder)
-
 	await model.publicClient.waitForTransactionReceipt({ confirmations, hash })
 	model.getChanges()
 }

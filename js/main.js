@@ -21,7 +21,6 @@ import * as myOrderPanel from './myOrderPanel.js'
 
 const initTrdeAddr = '0x9b16489771c8D3DaD4aA8e09A6B540B0A02D24F6'
 
-
 var publicClient
 var walletClient
 
@@ -30,7 +29,6 @@ window.onload = async () => {
 	const accounts = await window.ethereum.request({
 		method: 'eth_accounts'
 	})
-	console.log('eth_accounts:', accounts)
 	if (accounts.length > 0) {
 		await createConnect()
 	}
@@ -41,13 +39,10 @@ const titlePanel = createApp({
 	setup() {
 		const connect = ref('Connect')
 		
-		async function onConnectBtn() {
-			await createConnect()
-		}
-		
 		return {
 			connect,
-			onConnectBtn
+			onConnectBtn: createConnect,
+			onClaimBtn: claim
 		}
 	}
 }).mount('#titlePanel')
@@ -93,6 +88,36 @@ async function createConnect() {
 
 	updateView()
 	await model.reset(initTrdeAddr, publicClient, walletClient)
+}
+
+
+async function claim() {
+	if (!walletClient) {
+		dialog.showTip('You need connect wallet first')
+		return
+	}
+	
+	let confirmations = model.confirmations
+	let hash = await walletClient.writeContract({
+		address: model.USDT_ADDR,
+		abi: erc20Json.abi,
+		functionName: 'mint',
+		args: [walletClient.account.address, viem.parseUnits('100', model.usdtInfo.decimals)],
+		account: model.walletClient.account
+	})
+	
+	hash = await model.walletClient.writeContract({
+		address: model.MEME_ADDR,
+		abi: erc20Json.abi,
+		functionName: 'mint',
+		args: [walletClient.account.address, viem.parseUnits('100', model.memeInfo.decimals)],
+		account: model.walletClient.account
+	})
+
+	model.unwatchEvents()
+	await model.publicClient.waitForTransactionReceipt({ confirmations, hash })
+	dialog.showTip('100 USDT and 100 MEME have sent to you')
+	model.getChanges()
 }
 
 

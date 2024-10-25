@@ -5,14 +5,14 @@ const dialog = createApp({
 	setup() {
 		const title = ref('ATTENTION')
 		const content = ref('This is content')
-		const hasConfirm = ref(true)
+		const hasCancel = ref(true)
 		
 		function onConfirm() {
 			
 		}
 		
 		return {
-			title, content, hasConfirm, onConfirm
+			title, content, hasCancel, onConfirm
 		}
 	}
 }).mount('#dialog-rounded')
@@ -21,7 +21,7 @@ const dialog = createApp({
 export function showError(content) {
 	dialog.title = 'ERROR:'
 	dialog.content = content
-	dialog.hasConfirm = false
+	dialog.hasCancel = false
 	document.getElementById('dialog-rounded').showModal();
 }
 
@@ -29,7 +29,7 @@ export function showError(content) {
 export function showTip(content) {
 	dialog.title = 'TIP:'
 	dialog.content = content
-	dialog.hasConfirm = false
+	dialog.hasCancel = false
 	document.getElementById('dialog-rounded').showModal();
 }
 
@@ -37,7 +37,7 @@ export function showTip(content) {
 export function showDialog(content, onConfirm) {
 	dialog.title = 'ATTENTION:'
 	dialog.content = content
-	dialog.hasConfirm = true
+	dialog.hasCancel = true
 	dialog.onConfirm = onConfirm
 	document.getElementById('dialog-rounded').showModal();
 }

@@ -1,9 +1,13 @@
 export function maxPrecision(num, len) {
+	if (num == '') return ''
+	
 	let n = toPrecision(num, len)
 	return parseFloat(n).toString()
 }
 
 export function toPrecision(num, len) {
+	if (num == '') return ''
+	
 	let n = new Number(num).toPrecision(len)
 	if (n.indexOf('0') == 0) {
 		n = n.substr(0, n.length - 1)

@@ -81,13 +81,13 @@ async function cencelOrder(order) {
 		account: model.walletClient.account
 	})
 
+	model.unwatchEvents()
 	//updatePanel
 	for (let copy of myOrderPanel.openOrders) {
 		if (copy.index == order.index) {
 			copy.index = -1
 		}
 	}
-
 	await model.publicClient.waitForTransactionReceipt({ confirmations, hash })
 	model.getChanges()
 }

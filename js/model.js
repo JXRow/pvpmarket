@@ -90,7 +90,7 @@ async function getTradeInfo() {
 		
 		await getTokenInfo()
 		await getOrderList()
-		await getUserOrders()
+		await getUserOrders(currInterval)
 
 		watchEvents()
 		
@@ -155,8 +155,12 @@ async function getTokenInfo() {
 var currInterval = -1
 function watchEvents() {
 	if (currInterval > -1) clearInterval(currInterval)
-	
 	currInterval = setInterval(doGetChanges, 5000)
+}
+
+export function unwatchEvents() {
+	if (currInterval > -1) clearInterval(currInterval)
+	currInterval = -1
 }
 
 function doGetChanges() {
@@ -310,7 +314,6 @@ async function getUserOrders(_Interval) {
 	})
 	
 	if (_Interval == currInterval) {
-		console.log('GotUserOrders')
 		await dispatchEvent('GotUserOrders', null)
 	}
 }

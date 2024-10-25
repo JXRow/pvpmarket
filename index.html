@@ -36,6 +36,7 @@
 					</select>
 				</div>
 				<button type="button" class="nes-btn is-error" @click="onConnectBtn">{{ connect }}</button>
+				<button type="button" class="nes-btn is-warning" style="margin-left: 1rem;" @click="onClaimBtn">Claim</button>
 			</div>
 		</div>
 		<br />
@@ -62,9 +63,9 @@
 						</thead>
 						<tbody>
 							<tr class="nes-text" :class="{ 'is-error': order.color=='red', 'is-success': order.color=='green' }" v-for="order of orders">
-								<td>{{ order.price }}</td>
-								<td style="text-align: center;">{{ order.amount }}</td>
-								<td style="text-align: right;">{{ order.total }}</td>
+								<td>{{ order.color ? toPrecision(order.price, 6) : maxPrecision(order.price, 6) }}</td>
+								<td style="text-align: center;">{{ toPrecision(order.amount, 6) }}</td>
+								<td style="text-align: right;">{{ toPrecision(order.total, 6) }}</td>
 							</tr>
 						</tbody>
 					</table>
@@ -186,8 +187,8 @@
 				<p class="title">{{ title }}</p>
 				<p>{{ content }}</p>
 				<menu class="dialog-menu">
-					<button class="nes-btn is-primary"style="margin-right: 2rem;" v-if="hasConfirm" @click="onConfirm">Confirm</button>
-					<button class="nes-btn">Cancel</button>
+					<button class="nes-btn is-primary" @click="onConfirm">Confirm</button>
+					<button class="nes-btn" style="margin-left: 2rem;" v-if="hasCancel">Cancel</button>
 				</menu>
 			</form>
 		</dialog>
