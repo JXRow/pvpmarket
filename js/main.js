@@ -1,8 +1,7 @@
 import { createApp, ref } from 'vue'
 import * as viem from 'viem'
 import { unichainSepolia } from 'viem/chains'
-import erc20Json from './abi/MockERC20.json'
-with { type: "json" }
+import erc20Json from './abi/MockERC20.json'with { type: "json" }
 import serviceJson from './abi/TradeService.json' with { type: "json" }
 import tradeJson from './abi/MonoTrade.json' with { type: "json" }
 import * as dialog from './dialog.js'
@@ -12,6 +11,29 @@ import * as balancePanel from './balancePanel.js'
 import * as orderbookPanel from './orderbookPanel.js'
 import * as myOrderPanel from './myOrderPanel.js'
 
+const monadDevnet = viem.defineChain({
+    id: 41454,
+    name: 'Monad Devnet',
+    nativeCurrency: {
+        decimals: 18,
+        name: 'Monad',
+        symbol: 'MON',
+    },
+    rpcUrls: {
+        default: {
+            http: ['https://monad.devnet101.com/rpc/myU75Ctvm8IZpuvuX5diRNZOOKXVgmQH']
+        },
+    },
+    blockExplorers: {
+        default: { name: 'Explorer', url: 'https://blockscout.devnet101.com/' },
+    },
+    contracts: {
+        multicall3: {
+            address: '0x6009234967b1c7872de00bb3f3e77610b8d6dc9e',
+        },
+    },
+})
+
 //unichainSepolia 2024/10/15
 // const USDT_ADDR = '0x99b52f524b70cd0c93bd592b1843bf2f49a5fe75'
 // const MEME_ADDR = '0x4355d86e90d1646d0b79a362b7e5b29092047bce'
@@ -19,7 +41,16 @@ import * as myOrderPanel from './myOrderPanel.js'
 // const USDT_MEME_ADDR = '0x03DF076cA486b570a9Fb24bb77F7687B6e64b4Da'
 // const MEME_USDT_ADDR = '0x9b16489771c8D3DaD4aA8e09A6B540B0A02D24F6'
 
-const initTrdeAddr = '0x9b16489771c8D3DaD4aA8e09A6B540B0A02D24F6'
+//monadDevnet 2024/10/26
+// var USDT_ADDR = '0x43d42d3e31e03f898e901fa948165f50f67ff5ac'
+// var MEME_ADDR = '0x11344c1ebcfd7eeb4d4baa18a0312aea854493a7'
+// var SERVICE_ADDR = '0x072777f02ad827079f188d8175fb155b0e75343d'
+// var USDT_MEME_ADDR = '0xB2129Db9ed160e01CdeBB01EdD7f01774810a178'
+// var MEME_USDT_ADDR = '0x6eE62a29eaDfFb1e27d5C9525a3C3540D8264652'
+
+unichainSepolia.initTrdeAddr = '0x9b16489771c8D3DaD4aA8e09A6B540B0A02D24F6'
+monadDevnet.initTrdeAddr = '0x6eE62a29eaDfFb1e27d5C9525a3C3540D8264652'
+var currChain = monadDevnet
 
 var publicClient
 var walletClient
@@ -42,11 +73,25 @@ const titlePanel = createApp({
 		return {
 			connect,
 			onConnectBtn: createConnect,
-			onClaimBtn: claim
+			onClaimBtn: claim,
+			onSelectChain: switchChain
 		}
 	}
 }).mount('#titlePanel')
 
+
+async function switchChain(e) {
+	switch (e.target.value){
+		case '1301':
+			currChain = unichainSepolia
+			await createConnect()
+			break;
+		case '41454':
+			currChain = monadDevnet
+			await createConnect()
+			break;
+	}
+}
 
 async function createConnect() {
 	if (window.ethereum == undefined) {
@@ -54,8 +99,7 @@ async function createConnect() {
 	}
 
 	publicClient = viem.createPublicClient({
-		chain: unichainSepolia,
-		// transport: viem.webSocket('wss://sepolia.unichain.org')
+		chain: currChain,
 		transport: viem.http()
 	})
 
@@ -71,7 +115,7 @@ async function createConnect() {
 
 		walletClient = viem.createWalletClient({
 			account: address,
-			chain: unichainSepolia,
+			chain: currChain,
 			transport: viem.custom(window.ethereum)
 		})
 
@@ -81,13 +125,13 @@ async function createConnect() {
 		})
 		walletClient = viem.createWalletClient({
 			account: address,
-			chain: unichainSepolia,
+			chain: currChain,
 			transport: viem.custom(window.ethereum)
 		})
 	}
 
 	updateView()
-	await model.reset(initTrdeAddr, publicClient, walletClient)
+	await model.reset(currChain.initTrdeAddr, publicClient, walletClient)
 }
 
 

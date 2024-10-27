@@ -30,9 +30,9 @@
 			</h2>
 			<div v-cloak style="display: flex;">
 				<div class="nes-select" style="width: 20rem; margin-right: 1rem;">
-					<select required id="default_select">
-						<option value="0">Unichain Sepolia</option>
-						<!-- <option value="1">Ethereum Sepolia</option> -->
+					<select required @change="onSelectChain">
+						<option value="41454">Monad Devnet</option>
+						<option value="1301">Unichain Sepolia</option>
 					</select>
 				</div>
 				<button type="button" class="nes-btn is-error" @click="onConnectBtn">{{ connect }}</button>
