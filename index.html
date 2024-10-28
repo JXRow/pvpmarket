@@ -31,8 +31,8 @@
 			<div v-cloak style="display: flex;">
 				<div class="nes-select" style="width: 20rem; margin-right: 1rem;">
 					<select required @change="onSelectChain">
-						<option value="41454">Monad Devnet</option>
 						<option value="1301">Unichain Sepolia</option>
+						<option value="41454">Monad Devnet</option>
 					</select>
 				</div>
 				<button type="button" class="nes-btn is-error" @click="onConnectBtn">{{ connect }}</button>
@@ -44,9 +44,9 @@
 		<div style="margin-left: auto; margin-right: auto; width: fit-content;">
 			<div v-cloak id="balancePanel">
 				<i class="nes-icon coin"
-					style="margin-bottom: 0.5rem; margin-left: 37rem;"></i><span>x{{ usdt }}</span>
+					style="margin-bottom: 0.5rem; margin-left: 37rem;"></i><span @click="onUSDTClick">x{{ usdt }}</span>
 				<i class="nes-icon heart"
-					style="margin-bottom: 0.5rem; margin-left: 1rem;"></i><span>x{{ meme }}</span>
+					style="margin-bottom: 0.5rem; margin-left: 1rem;"></i><span @click="onMEMEClick">x{{ meme }}</span>
 			</div>
 			<br />
 
@@ -63,7 +63,7 @@
 						</thead>
 						<tbody>
 							<tr class="nes-text" :class="{ 'is-error': order.color=='red', 'is-success': order.color=='green' }" v-for="order of orders">
-								<td>{{ order.color ? toPrecision(order.price, 6) : maxPrecision(order.price, 6) }}</td>
+								<td @click="onPriceClick(order)">{{ order.color ? toPrecision(order.price, 6) : maxPrecision(order.price, 6) }}</td>
 								<td style="text-align: center;">{{ toPrecision(order.amount, 6) }}</td>
 								<td style="text-align: right;">{{ toPrecision(order.total, 6) }}</td>
 							</tr>

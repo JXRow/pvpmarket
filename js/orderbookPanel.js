@@ -30,28 +30,22 @@ const orderbookPanel = createApp({
 
 			switch (e.target.id){
 				case 'buyPriceInput':
-					buyPrice.value = value
-					buyTotal.value = util.maxPrecision(value * buyAmount.value, 6)
+					setBuyPrice(value)
 					break;
 				case 'buyAmountInput':
-					buyAmount.value = value
-					buyTotal.value = util.maxPrecision(value * buyPrice.value, 6)
+					setBuyAmount(value)
 					break;
 				case 'buyTotalInput':
-					buyTotal.value = value
-					if (buyPrice.value > 0) buyAmount.value = util.maxPrecision(value / buyPrice.value, 6)
+					setBuyTotal(value)
 					break;
 				case 'sellPriceInput':
-					sellPrice.value = value
-					sellTotal.value = util.maxPrecision(value * sellAmount.value, 6)
+					setSellPrice(value)
 					break;
 				case 'sellAmountInput':
-					sellAmount.value = value
-					sellTotal.value = util.maxPrecision(value * sellPrice.value, 6)
+					setSellAmount(value)
 					break;
 				case 'sellTotalInput':
-					sellTotal.value = value
-					if (sellPrice.value > 0) sellAmount.value = util.maxPrecision(value / sellPrice.value, 6)
+					setSellTotal(value)
 					break;
 				default:
 					break;
@@ -68,20 +62,57 @@ const orderbookPanel = createApp({
 			let usdtIn = viem.parseUnits(buyTotal.value.toString(), model.usdtInfo.decimals)
 			let memeWant = viem.parseUnits(buyAmount.value.toString(), model.memeInfo.decimals)
 			await placeBuyOrder(usdtIn, memeWant)
-
-			//to do update all
+		}
+		
+		function onPriceClick(order) {
+			if (order.color == 'red') {
+				setSellPrice(order.price)
+			} else if (order.color == 'green') {
+				setBuyPrice(order.price)
+			}
 		}
 
 		return {
 			usdtSymbol, memeSymbol, orders, 
 			buyPrice, buyAmount, buyTotal,
 			sellPrice, sellAmount, sellTotal,
-			onInput, onSellBtn, onBuyBtn, 
+			onInput, onSellBtn, onBuyBtn, onPriceClick,
 			toPrecision: util.toPrecision,
 			maxPrecision: util.maxPrecision
 		}
 	}
 }).mount('#orderbookPanel')
+
+
+export function setBuyPrice(value) {
+	orderbookPanel.buyPrice = value
+	orderbookPanel.buyTotal = util.maxPrecision(value * orderbookPanel.buyAmount, 6)
+}
+
+export function setBuyAmount(value) {
+	orderbookPanel.buyAmount = value
+	orderbookPanel.buyTotal = util.maxPrecision(value * orderbookPanel.buyPrice, 6)
+}
+
+export function setBuyTotal(value) {
+	orderbookPanel.buyTotal = value
+	if (orderbookPanel.buyPrice > 0) orderbookPanel.buyAmount = util.maxPrecision(value / orderbookPanel.buyPrice, 6)
+}
+
+export function setSellPrice(value) {
+	orderbookPanel.sellPrice = value
+	orderbookPanel.sellTotal = util.maxPrecision(value * orderbookPanel.sellAmount, 6)
+}
+
+export function setSellAmount(value) {
+	orderbookPanel.sellAmount = value
+	orderbookPanel.sellTotal = util.maxPrecision(value * orderbookPanel.sellPrice, 6)
+}
+
+export function setSellTotal(value) {
+	orderbookPanel.sellTotal = value
+	if (orderbookPanel.sellPrice > 0) orderbookPanel.sellAmount = util.maxPrecision(value / orderbookPanel.sellPrice, 6)
+}
 
 
 async function updateView() {
@@ -134,10 +165,15 @@ async function updateView() {
 	if (_buyOrders.length > 6) _buyOrders.length = 6
 
 	let average = { price: (parseFloat(_sellOrders[0].price) + parseFloat(_buyOrders[0].price)) / 2, amount: '', total: '' }
+	while (_sellOrders.length < 6) {
+		_sellOrders.push({ price:'-', amount:'', total:'', color:'red' })
+	}
+	while (_buyOrders.length < 6) {
+		_buyOrders.push({ price:'-', amount:'', total:'', color:'green' })
+	}
 	_sellOrders.reverse()
-	let orders = _sellOrders.concat(_buyOrders)
+	let orders = _sellOrders.concat(average, _buyOrders)
 	_sellOrders.reverse()
-	orders.splice(_sellOrders.length, 0, average)
 
 	orderbookPanel.orders = orders
 

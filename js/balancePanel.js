@@ -3,6 +3,7 @@ import { createApp, ref } from 'vue'
 import * as dialog from './dialog.js'
 import * as util from './util.js'
 import * as model from './model.js'
+import * as orderbookPanel from './orderbookPanel.js'
 
 
 const balancePanel = createApp({
@@ -10,8 +11,16 @@ const balancePanel = createApp({
 		const usdt = ref('____________')
 		const meme = ref('____________')
 		
+		function onUSDTClick() {
+			if (parseFloat(usdt.value) > 0) orderbookPanel.setBuyTotal(parseFloat(usdt.value))
+		}
+		
+		function onMEMEClick() {
+			if (parseFloat(meme.value) > 0) orderbookPanel.setSellAmount(parseFloat(meme.value))
+		}
+		
 		return {
-			usdt, meme
+			usdt, meme, onUSDTClick, onMEMEClick
 		}
 	}
 }).mount('#balancePanel')

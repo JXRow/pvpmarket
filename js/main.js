@@ -50,7 +50,7 @@ const monadDevnet = viem.defineChain({
 
 unichainSepolia.initTrdeAddr = '0x9b16489771c8D3DaD4aA8e09A6B540B0A02D24F6'
 monadDevnet.initTrdeAddr = '0x6eE62a29eaDfFb1e27d5C9525a3C3540D8264652'
-var currChain = monadDevnet
+var currChain = unichainSepolia
 
 var publicClient
 var walletClient

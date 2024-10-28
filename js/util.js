@@ -1,12 +1,12 @@
 export function maxPrecision(num, len) {
-	if (num == '') return ''
+	if (isNaN(num) || num == '') return num
 	
 	let n = toPrecision(num, len)
 	return parseFloat(n).toString()
 }
 
 export function toPrecision(num, len) {
-	if (num == '') return ''
+	if (isNaN(num) || num == '') return num
 	
 	let n = new Number(num).toPrecision(len)
 	if (n.indexOf('0') == 0) {
