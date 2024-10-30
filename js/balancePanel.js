@@ -12,11 +12,19 @@ const balancePanel = createApp({
 		const meme = ref('____________')
 		
 		function onUSDTClick() {
-			if (parseFloat(usdt.value) > 0) orderbookPanel.setBuyTotal(parseFloat(usdt.value))
+			if (parseFloat(usdt.value) > 0) {
+				let usdtInput = model.usdtInfo.balance * 10000n / (BigInt(model.fee) + 10000n)
+				let usdtInputFormat = util.maxPrecision(viem.formatUnits(usdtInput, model.usdtInfo.decimals), 6)
+				orderbookPanel.setBuyTotal(usdtInputFormat)
+			}
 		}
 		
 		function onMEMEClick() {
-			if (parseFloat(meme.value) > 0) orderbookPanel.setSellAmount(parseFloat(meme.value))
+			if (parseFloat(meme.value) > 0) {
+				let memeInput = model.memeInfo.balance * 10000n / (BigInt(model.fee) + 10000n)
+				let memeInputFormat = util.maxPrecision(viem.formatUnits(memeInput, model.memeInfo.decimals), 6)
+				orderbookPanel.setSellAmount(memeInputFormat)
+			}
 		}
 		
 		return {

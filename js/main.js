@@ -1,4 +1,4 @@
-import { createApp, ref } from 'vue'
+import { createApp, ref, toRef } from 'vue'
 import * as viem from 'viem'
 import { unichainSepolia } from 'viem/chains'
 import erc20Json from './abi/MockERC20.json'with { type: "json" }
@@ -65,7 +65,6 @@ window.onload = async () => {
 	}
 }
 
-
 const titlePanel = createApp({
 	setup() {
 		const connect = ref('Connect')
@@ -93,41 +92,49 @@ async function switchChain(e) {
 	}
 }
 
+
 async function createConnect() {
 	if (window.ethereum == undefined) {
 		dialog.showError('It seems that you dont have wallet extension..')
 	}
-
-	publicClient = viem.createPublicClient({
-		chain: currChain,
-		transport: viem.http()
-	})
-
-	if (walletClient) {
-		const [address] = await window.ethereum.request({
-			method: "wallet_requestPermissions",
-			params: [{
-				eth_accounts: {}
-			}]
-		}).then(() => ethereum.request({
-			method: 'eth_requestAccounts'
-		}))
-
-		walletClient = viem.createWalletClient({
-			account: address,
+	
+	util.loading(toRef(titlePanel, 'connect'), 'Connect *')
+	
+	try {
+		publicClient = viem.createPublicClient({
 			chain: currChain,
-			transport: viem.custom(window.ethereum)
+			transport: viem.http()
 		})
-
-	} else {
-		const [address] = await window.ethereum.request({
-			method: 'eth_requestAccounts'
-		})
-		walletClient = viem.createWalletClient({
-			account: address,
-			chain: currChain,
-			transport: viem.custom(window.ethereum)
-		})
+		
+		if (walletClient) {
+			const [address] = await window.ethereum.request({
+				method: "wallet_requestPermissions",
+				params: [{
+					eth_accounts: {}
+				}]
+			}).then(() => ethereum.request({
+				method: 'eth_requestAccounts'
+			}))
+		
+			walletClient = viem.createWalletClient({
+				account: address,
+				chain: currChain,
+				transport: viem.custom(window.ethereum)
+			})
+		
+		} else {
+			const [address] = await window.ethereum.request({
+				method: 'eth_requestAccounts'
+			})
+			walletClient = viem.createWalletClient({
+				account: address,
+				chain: currChain,
+				transport: viem.custom(window.ethereum)
+			})
+		}
+	} catch(e) {
+		dialog.showError('Connect wallet failed')
+		titlePanel.connect = 'Connect'
 	}
 
 	updateView()

@@ -145,7 +145,7 @@
 								<td style="text-align: right;">{{ order.amount }}</td>
 								<td style="text-align: right;">{{ order.filled }}</td>
 								<td style="text-align: right;">{{ order.total }}</td>
-								<td style="text-align: right;"><a v-if="order.index > 0" @click="onCancelBtn(order)">Cancel</a>{{ order.index < 0 ? '---' : '' }}</td>
+								<td style="text-align: right;"><a v-if="order.index > 0" @click="onCancelBtn(order)">Cancel</a>{{ order.op }}</td>
 							</tr>
 						</tbody>
 					</table>

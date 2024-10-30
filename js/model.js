@@ -95,7 +95,7 @@ async function getTradeInfo() {
 		watchEvents()
 		
 	} else {
-		dialog.showError('Trade address (in URL) is Wrong, try another one')
+		dialog.showError('Something wrong with RPC')
 	}
 }
 

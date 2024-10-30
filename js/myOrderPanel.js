@@ -1,5 +1,5 @@
 import * as viem from 'viem'
-import { createApp, ref } from 'vue'
+import { createApp, ref, toRef } from 'vue'
 import erc20Json from './abi/MockERC20.json' with { type: "json" }
 import serviceJson from './abi/TradeService.json' with { type: "json" }
 import tradeJson from './abi/MonoTrade.json' with { type: "json" }
@@ -51,6 +51,7 @@ async function updateView() {
 		copy.amount = util.maxPrecision(order.amount, 5)
 		copy.total = util.maxPrecision(order.total, 5)
 		copy.filled = (100 * order.filled).toPrecision(3) + '%'
+		copy.op = ''
 
 		if (copy.status == 'Pend') {
 			openOrders.push(copy)
@@ -68,11 +69,17 @@ model.addEventListener('GotUserOrders', updateView)
 
 export function insertPendingOrder(pendingOrder) {
 	myOrderPanel.openOrders.unshift(pendingOrder)
+	util.loading(toRef(myOrderPanel.openOrders[0], 'date'), '*')
+}
+
+
+export function removePendingOrder(pendingOrder) {
+	let i = myOrderPanel.openOrders.indexOf(pendingOrder)
+	myOrderPanel.openOrders.splice(i, 1)
 }
 
 
 async function cencelOrder(order) {
-	let confirmations = model.confirmations
 	let hash = await model.walletClient.writeContract({
 		address: order.trade,
 		abi: tradeJson.abi,
@@ -80,14 +87,24 @@ async function cencelOrder(order) {
 		args: [order.orderId],
 		account: model.walletClient.account
 	})
-
-	model.unwatchEvents()
+	
 	//updatePanel
-	for (let copy of myOrderPanel.openOrders) {
-		if (copy.index == order.index) {
-			copy.index = -1
-		}
+	model.unwatchEvents()
+	
+	let date = order.date
+	let i = myOrderPanel.openOrders.findIndex(function(openOrder) {
+		return openOrder.index == order.index
+	})
+	console.log('cencelOrder i=', i)
+	util.loading(toRef(myOrderPanel.openOrders[i], 'op'), '*')
+	toRef(myOrderPanel.openOrders[i], 'index').value = -1
+	
+	let confirmations = model.confirmations
+	let tx = await model.publicClient.waitForTransactionReceipt({ confirmations, hash })
+	if (tx.status == 'success') {
+		model.getChanges()
+	} else {
+		dialog.showError('Tx is failed')
+		toRef(myOrderPanel.openOrders[i], 'op').value = ''
 	}
-	await model.publicClient.waitForTransactionReceipt({ confirmations, hash })
-	model.getChanges()
 }

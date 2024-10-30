@@ -187,6 +187,12 @@ model.addEventListener('GotOrderList', updateView)
 async function placeSellOrder(memeIn, usdtWant) {
 	let confirmations = model.confirmations
 	let memeWithFee = memeIn * BigInt(model.fee) / 10000n + memeIn
+	if (model.memeInfo.balance < memeWithFee) {
+		let memeWithFeeStr = util.maxPrecision(viem.formatUnits(memeWithFee, model.memeInfo.decimals), 6)
+		dialog.showTip('You need ' + memeWithFeeStr + ' ' + model.memeInfo.symbol + '(with fee)')
+		return
+	}
+	
 	if (model.memeInfo.allowance < memeWithFee) {
 		let hash = await model.walletClient.writeContract({
 			address: model.MEME_ADDR,
@@ -211,28 +217,39 @@ async function placeSellOrder(memeIn, usdtWant) {
 		date: 'Committing',
 		pair: model.memeInfo.symbol + '/' + model.usdtInfo.symbol,
 		side: 'Sell',
-		amount: parseFloat(viem.formatUnits(memeIn, model.memeInfo.decimals)),
-		total: parseFloat(viem.formatUnits(usdtWant, model.usdtInfo.decimals)),
+		amount: util.maxPrecision(viem.formatUnits(memeIn, model.memeInfo.decimals), 5),
+		total: util.maxPrecision(viem.formatUnits(usdtWant, model.usdtInfo.decimals), 5),
 		filled: '0%'
 	}
-	pendingOrder.price = pendingOrder.total / pendingOrder.amount
+	pendingOrder.price = util.maxPrecision(pendingOrder.total / pendingOrder.amount, 5)
 	
 	model.unwatchEvents()
 	myOrderPanel.insertPendingOrder(pendingOrder)
-	await model.publicClient.waitForTransactionReceipt({ confirmations, hash })
-	model.getChanges()
+	let tx = await model.publicClient.waitForTransactionReceipt({ confirmations, hash })
+	if (tx.status == 'success') {
+		model.getChanges()
+	} else {
+		myOrderPanel.removePendingOrder(pendingOrder)
+		dialog.showError('Tx is failed')
+	}
 }
 
 
 async function placeBuyOrder(usdtIn, memeWant) {
 	let confirmations = model.confirmations
 	let usdtWithFee = usdtIn * BigInt(model.fee) / 10000n + usdtIn
+	if (model.usdtInfo.balance < usdtWithFee) {
+		let usdtWithFeeStr = util.maxPrecision(viem.formatUnits(usdtWithFee, model.usdtInfo.decimals), 6)
+		dialog.showTip('You need ' + usdtWithFeeStr + ' ' + model.usdtInfo.symbol + '(with fee)')
+		return
+	}
+	
 	if (model.usdtInfo.allowance < usdtWithFee) {
 		let hash = await model.walletClient.writeContract({
 			address: model.USDT_ADDR,
 			abi: erc20Json.abi,
 			functionName: 'approve',
-			args: [model.SERVICE_ADDR, model.usdtWithFee],
+			args: [model.SERVICE_ADDR, usdtWithFee],
 			account: model.walletClient.account
 		})
 		await model.publicClient.waitForTransactionReceipt({ confirmations, hash })
@@ -251,14 +268,19 @@ async function placeBuyOrder(usdtIn, memeWant) {
 		date: 'Committing',
 		pair: model.memeInfo.symbol + '/' + model.usdtInfo.symbol,
 		side: 'Buy',
-		amount: parseFloat(viem.formatUnits(memeWant, model.memeInfo.decimals)),
-		total: parseFloat(viem.formatUnits(usdtIn, model.usdtInfo.decimals)),
+		amount: util.maxPrecision(viem.formatUnits(memeWant, model.memeInfo.decimals), 5),
+		total: util.maxPrecision(viem.formatUnits(usdtIn, model.usdtInfo.decimals), 5),
 		filled: '0%'
 	}
-	pendingOrder.price = pendingOrder.total / pendingOrder.amount
+	pendingOrder.price = util.maxPrecision(pendingOrder.total / pendingOrder.amount, 5)
 	
 	model.unwatchEvents()
 	myOrderPanel.insertPendingOrder(pendingOrder)
-	await model.publicClient.waitForTransactionReceipt({ confirmations, hash })
-	model.getChanges()
+	let tx = await model.publicClient.waitForTransactionReceipt({ confirmations, hash })
+	if (tx.status == 'success') {
+		model.getChanges()
+	} else {
+		myOrderPanel.removePendingOrder(pendingOrder)
+		dialog.showError('Tx is failed')
+	}
 }
