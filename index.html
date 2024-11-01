@@ -88,7 +88,7 @@
 						<input id="buyTotalInput" class="nes-input" placeholder="0.0" v-model="buyTotal" @change="onInput">
 					</div>
 					<br />
-					<button type="button" class="nes-btn is-success" style="width: 100%;" @click="onBuyBtn">Buy {{ memeSymbol }}</button>
+					<button type="button" class="nes-btn is-success" style="width: 100%;" @click="onBuyBtn">Buy {{ buyBtnTxt }}</button>
 				</div>
 
 				<div class="nes-container with-title is-rounded is-centered" style="width: 16rem; margin: 1rem;">
@@ -108,7 +108,7 @@
 						<input id="sellTotalInput" class="nes-input" placeholder="0.0" v-model="sellTotal" @change="onInput">
 					</div>
 					<br />
-					<button type="button" class="nes-btn is-error" style="width: 100%;" @click="onSellBtn">Sell {{ memeSymbol }}</button>
+					<button type="button" class="nes-btn is-error" style="width: 100%;" @click="onSellBtn">Sell {{ sellBtnTxt }}</button>
 				</div>
 			</div>
 			
@@ -145,7 +145,7 @@
 								<td style="text-align: right;">{{ order.amount }}</td>
 								<td style="text-align: right;">{{ order.filled }}</td>
 								<td style="text-align: right;">{{ order.total }}</td>
-								<td style="text-align: right;"><a v-if="order.index > 0" @click="onCancelBtn(order)">Cancel</a>{{ order.op }}</td>
+								<td style="text-align: right;"><a v-if="order.op == 'Cancel'" @click="onCancelBtn(order)">Cancel</a>{{ order.op == 'Cancel' ? '' : order.op }}</td>
 							</tr>
 						</tbody>
 					</table>
@@ -192,7 +192,13 @@
 				</menu>
 			</form>
 		</dialog>
-
+		
+		<div id="balloon-tip">
+			<Transition name="slide-fade">
+				<p v-cloak class="nes-balloon from-right nes-pointer tip" v-if="show" @click="onClick">{{ content }}</p>
+			</Transition>
+		</div>
+		
 		<footer>
 			<p>
 				<span>&copy;2024</span>

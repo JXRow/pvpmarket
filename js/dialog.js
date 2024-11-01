@@ -22,7 +22,7 @@ export function showError(content) {
 	dialog.title = 'ERROR:'
 	dialog.content = content
 	dialog.hasCancel = false
-	document.getElementById('dialog-rounded').showModal();
+	document.getElementById('dialog-rounded').showModal()
 }
 
 
@@ -30,7 +30,7 @@ export function showTip(content) {
 	dialog.title = 'TIP:'
 	dialog.content = content
 	dialog.hasCancel = false
-	document.getElementById('dialog-rounded').showModal();
+	document.getElementById('dialog-rounded').showModal()
 }
 
 
@@ -39,5 +39,5 @@ export function showDialog(content, onConfirm) {
 	dialog.content = content
 	dialog.hasCancel = true
 	dialog.onConfirm = onConfirm
-	document.getElementById('dialog-rounded').showModal();
+	document.getElementById('dialog-rounded').showModal()
 }

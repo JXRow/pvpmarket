@@ -4,6 +4,7 @@ import erc20Json from './abi/MockERC20.json' with { type: "json" }
 import serviceJson from './abi/TradeService.json' with { type: "json" }
 import tradeJson from './abi/MonoTrade.json' with { type: "json" }
 import * as dialog from './dialog.js'
+import * as balloon from './balloon.js'
 import * as util from './util.js'
 import * as model from './model.js'
 
@@ -51,7 +52,7 @@ async function updateView() {
 		copy.amount = util.maxPrecision(order.amount, 5)
 		copy.total = util.maxPrecision(order.total, 5)
 		copy.filled = (100 * order.filled).toPrecision(3) + '%'
-		copy.op = ''
+		copy.op = 'Cancel'
 
 		if (copy.status == 'Pend') {
 			openOrders.push(copy)
@@ -68,43 +69,71 @@ model.addEventListener('GotUserOrders', updateView)
 
 
 export function insertPendingOrder(pendingOrder) {
+	model.removeEventListener('GotUserOrders', updateView)
 	myOrderPanel.openOrders.unshift(pendingOrder)
 	util.loading(toRef(myOrderPanel.openOrders[0], 'date'), '*')
 }
 
 
-export function removePendingOrder(pendingOrder) {
-	let i = myOrderPanel.openOrders.indexOf(pendingOrder)
-	myOrderPanel.openOrders.splice(i, 1)
+export function removePendingOrder(pendingOrder, removeNow) {
+	if (removeNow) {
+		let i = myOrderPanel.openOrders.indexOf(pendingOrder)
+		myOrderPanel.openOrders.splice(i, 1)
+	}
+	model.addEventListener('GotUserOrders', updateView)
+	model.getChanges()
 }
 
 
 async function cencelOrder(order) {
-	let hash = await model.walletClient.writeContract({
-		address: order.trade,
-		abi: tradeJson.abi,
-		functionName: 'cancelOrder',
-		args: [order.orderId],
-		account: model.walletClient.account
-	})
-	
-	//updatePanel
-	model.unwatchEvents()
+	model.removeEventListener('GotUserOrders', updateView)
 	
 	let date = order.date
 	let i = myOrderPanel.openOrders.findIndex(function(openOrder) {
 		return openOrder.index == order.index
 	})
-	console.log('cencelOrder i=', i)
-	util.loading(toRef(myOrderPanel.openOrders[i], 'op'), '*')
-	toRef(myOrderPanel.openOrders[i], 'index').value = -1
 	
-	let confirmations = model.confirmations
-	let tx = await model.publicClient.waitForTransactionReceipt({ confirmations, hash })
-	if (tx.status == 'success') {
+	if (i == -1) {
+		console.log('ERROR: openOrder.index:', openOrder.index, 'order.index', order.index)
+		model.addEventListener('GotUserOrders', updateView)
 		model.getChanges()
-	} else {
-		dialog.showError('Tx is failed')
-		toRef(myOrderPanel.openOrders[i], 'op').value = ''
+		return
 	}
+	
+	util.loading(toRef(myOrderPanel.openOrders[i], 'op'), '*')
+	let hash
+	try {
+		hash = await model.walletClient.writeContract({
+			address: order.trade,
+			abi: tradeJson.abi,
+			functionName: 'cancelOrder',
+			args: [order.orderId],
+			account: model.walletClient.account
+		})
+	} catch(e) {
+		toRef(myOrderPanel.openOrders[i], 'op').value = 'Cancel'
+		model.addEventListener('GotUserOrders', updateView)
+		model.getChanges()
+		return
+	}
+	
+	util.loading(toRef(myOrderPanel.openOrders[i], 'op'), '**')
+	let tx
+	try {	
+		tx = await model.publicClient.waitForTransactionReceipt({ confirmations: model.confirmations, hash })
+	} catch(e) {
+		dialog.showError('Network Error')
+		toRef(myOrderPanel.openOrders[i], 'op').value = 'Cancel'
+		model.addEventListener('GotUserOrders', updateView)
+		model.getChanges()
+		return
+	}
+	
+	if (tx.status == 'success') {
+		balloon.show('Tx Success', 'https://sepolia.uniscan.xyz/tx/' + hash)
+	} else {
+		dialog.showError('Tx Fail')
+	}
+	model.addEventListener('GotUserOrders', updateView)
+	model.getChanges()
 }

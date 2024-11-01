@@ -5,6 +5,7 @@ import erc20Json from './abi/MockERC20.json'with { type: "json" }
 import serviceJson from './abi/TradeService.json' with { type: "json" }
 import tradeJson from './abi/MonoTrade.json' with { type: "json" }
 import * as dialog from './dialog.js'
+import * as balloon from './balloon.js'
 import * as util from './util.js'
 import * as model from './model.js'
 import * as balancePanel from './balancePanel.js'
@@ -165,7 +166,6 @@ async function claim() {
 		account: model.walletClient.account
 	})
 
-	model.unwatchEvents()
 	await model.publicClient.waitForTransactionReceipt({ confirmations, hash })
 	dialog.showTip('100 USDT and 100 MEME have sent to you')
 	model.getChanges()

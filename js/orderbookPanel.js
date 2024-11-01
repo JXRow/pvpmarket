@@ -1,9 +1,10 @@
 import * as viem from 'viem'
-import { createApp, ref } from 'vue'
+import { createApp, ref, toRef } from 'vue'
 import erc20Json from './abi/MockERC20.json' with { type: "json" }
 import serviceJson from './abi/TradeService.json' with { type: "json" }
 import tradeJson from './abi/MonoTrade.json' with { type: "json" }
 import * as dialog from './dialog.js'
+import * as balloon from './balloon.js'
 import * as util from './util.js'
 import * as model from './model.js'
 import * as myOrderPanel from './myOrderPanel.js'
@@ -13,6 +14,8 @@ const orderbookPanel = createApp({
 	setup() {
 		const usdtSymbol = ref('???')
 		const memeSymbol = ref('???')
+		const buyBtnTxt = ref('???')
+		const sellBtnTxt = ref('???')
 		const orders = ref([])
 		const buyPrice = ref('')
 		const buyAmount = ref('')
@@ -55,13 +58,21 @@ const orderbookPanel = createApp({
 		async function onSellBtn() {
 			let memeIn = viem.parseUnits(sellAmount.value.toString(), model.memeInfo.decimals)
 			let usdtWant = viem.parseUnits(sellTotal.value.toString(), model.usdtInfo.decimals)
-			await placeSellOrder(memeIn, usdtWant)
+			if (memeIn <= 0n || usdtWant <= 0n) {
+				dialog.showTip('Invalid number')
+			} else {
+				await placeSellOrder(memeIn, usdtWant)
+			}
 		}	
 
 		async function onBuyBtn() {
 			let usdtIn = viem.parseUnits(buyTotal.value.toString(), model.usdtInfo.decimals)
 			let memeWant = viem.parseUnits(buyAmount.value.toString(), model.memeInfo.decimals)
-			await placeBuyOrder(usdtIn, memeWant)
+			if (usdtIn <= 0n || memeWant <= 0n) {
+				dialog.showTip('Invalid number')
+			} else {
+				await placeBuyOrder(usdtIn, memeWant)
+			}
 		}
 		
 		function onPriceClick(order) {
@@ -73,7 +84,8 @@ const orderbookPanel = createApp({
 		}
 
 		return {
-			usdtSymbol, memeSymbol, orders, 
+			usdtSymbol, memeSymbol, buyBtnTxt, sellBtnTxt,
+			orders, 
 			buyPrice, buyAmount, buyTotal,
 			sellPrice, sellAmount, sellTotal,
 			onInput, onSellBtn, onBuyBtn, onPriceClick,
@@ -115,10 +127,7 @@ export function setSellTotal(value) {
 }
 
 
-async function updateView() {
-	orderbookPanel.usdtSymbol = model.usdtInfo.symbol
-	orderbookPanel.memeSymbol = model.memeInfo.symbol
-	
+async function updateList() {
 	if (model.sellOrders.length == 0 || model.buyOrders.length == 0) return
 
 	//combine the same price orders 
@@ -181,11 +190,20 @@ async function updateView() {
 	if (orderbookPanel.sellPrice == '') orderbookPanel.sellPrice = util.maxPrecision(_buyOrders[0].price, 6)
 }
 
-model.addEventListener('GotOrderList', updateView)
+model.addEventListener('GotOrderList', updateList)
+
+
+async function updateSymbol() {
+	orderbookPanel.usdtSymbol = model.usdtInfo.symbol
+	orderbookPanel.memeSymbol = model.memeInfo.symbol
+	orderbookPanel.sellBtnTxt = model.memeInfo.symbol
+	orderbookPanel.buyBtnTxt = model.memeInfo.symbol
+}
+
+model.addEventListener('GotPair', updateSymbol)
 
 
 async function placeSellOrder(memeIn, usdtWant) {
-	let confirmations = model.confirmations
 	let memeWithFee = memeIn * BigInt(model.fee) / 10000n + memeIn
 	if (model.memeInfo.balance < memeWithFee) {
 		let memeWithFeeStr = util.maxPrecision(viem.formatUnits(memeWithFee, model.memeInfo.decimals), 6)
@@ -193,28 +211,37 @@ async function placeSellOrder(memeIn, usdtWant) {
 		return
 	}
 	
-	if (model.memeInfo.allowance < memeWithFee) {
-		let hash = await model.walletClient.writeContract({
-			address: model.MEME_ADDR,
-			abi: erc20Json.abi,
-			functionName: 'approve',
-			args: [model.SERVICE_ADDR, memeWithFee],
+	util.loading(toRef(orderbookPanel, 'sellBtnTxt'), model.memeInfo.symbol + ' *')
+	let hash
+	try {
+		if (model.memeInfo.allowance < memeWithFee) {
+			hash = await model.walletClient.writeContract({
+				address: model.MEME_ADDR,
+				abi: erc20Json.abi,
+				functionName: 'approve',
+				args: [model.SERVICE_ADDR, memeWithFee],
+				account: model.walletClient.account
+			})
+			await model.publicClient.waitForTransactionReceipt({ confirmations: model.confirmations, hash })
+		}
+
+		hash = await model.walletClient.writeContract({
+			address: model.SERVICE_ADDR,
+			abi: serviceJson.abi,
+			functionName: 'placeOrder',
+			args: [model.MEME_USDT_ADDR, memeIn, usdtWant],
 			account: model.walletClient.account
 		})
-		await model.publicClient.waitForTransactionReceipt({ confirmations, hash })
+	} catch(e) {
+		orderbookPanel.sellBtnTxt = model.memeInfo.symbol
+		return
 	}
-
-	let hash = await model.walletClient.writeContract({
-		address: model.SERVICE_ADDR,
-		abi: serviceJson.abi,
-		functionName: 'placeOrder',
-		args: [model.MEME_USDT_ADDR, memeIn, usdtWant],
-		account: model.walletClient.account
-	})
-
+	
+	orderbookPanel.sellBtnTxt = model.memeInfo.symbol
+	
 	//insert PendingOrder
 	let pendingOrder = {
-		date: 'Committing',
+		date: 'Updating',
 		pair: model.memeInfo.symbol + '/' + model.usdtInfo.symbol,
 		side: 'Sell',
 		amount: util.maxPrecision(viem.formatUnits(memeIn, model.memeInfo.decimals), 5),
@@ -222,21 +249,28 @@ async function placeSellOrder(memeIn, usdtWant) {
 		filled: '0%'
 	}
 	pendingOrder.price = util.maxPrecision(pendingOrder.total / pendingOrder.amount, 5)
-	
-	model.unwatchEvents()
 	myOrderPanel.insertPendingOrder(pendingOrder)
-	let tx = await model.publicClient.waitForTransactionReceipt({ confirmations, hash })
+	
+	let tx
+	try {
+		tx = await model.publicClient.waitForTransactionReceipt({ confirmations: model.confirmations, hash })
+	} catch(e) {
+		dialog.showError('Network Error')
+		myOrderPanel.removePendingOrder(pendingOrder, true)
+		return
+	}
+	
 	if (tx.status == 'success') {
-		model.getChanges()
+		balloon.show('Tx Success', 'https://sepolia.uniscan.xyz/tx/' + hash)
+		myOrderPanel.removePendingOrder(pendingOrder, false)
 	} else {
-		myOrderPanel.removePendingOrder(pendingOrder)
-		dialog.showError('Tx is failed')
+		dialog.showError('Tx fail')
+		myOrderPanel.removePendingOrder(pendingOrder, true)
 	}
 }
 
 
 async function placeBuyOrder(usdtIn, memeWant) {
-	let confirmations = model.confirmations
 	let usdtWithFee = usdtIn * BigInt(model.fee) / 10000n + usdtIn
 	if (model.usdtInfo.balance < usdtWithFee) {
 		let usdtWithFeeStr = util.maxPrecision(viem.formatUnits(usdtWithFee, model.usdtInfo.decimals), 6)
@@ -244,28 +278,37 @@ async function placeBuyOrder(usdtIn, memeWant) {
 		return
 	}
 	
-	if (model.usdtInfo.allowance < usdtWithFee) {
-		let hash = await model.walletClient.writeContract({
-			address: model.USDT_ADDR,
-			abi: erc20Json.abi,
-			functionName: 'approve',
-			args: [model.SERVICE_ADDR, usdtWithFee],
+	util.loading(toRef(orderbookPanel, 'buyBtnTxt'), model.memeInfo.symbol + ' *')
+	let hash
+	try {
+		if (model.usdtInfo.allowance < usdtWithFee) {
+			hash = await model.walletClient.writeContract({
+				address: model.USDT_ADDR,
+				abi: erc20Json.abi,
+				functionName: 'approve',
+				args: [model.SERVICE_ADDR, usdtWithFee],
+				account: model.walletClient.account
+			})
+			await model.publicClient.waitForTransactionReceipt({ confirmations: model.confirmations, hash })
+		}
+		
+		hash = await model.walletClient.writeContract({
+			address: model.SERVICE_ADDR,
+			abi: serviceJson.abi,
+			functionName: 'placeOrder',
+			args: [model.USDT_MEME_ADDR, usdtIn, memeWant],
 			account: model.walletClient.account
 		})
-		await model.publicClient.waitForTransactionReceipt({ confirmations, hash })
+	} catch(e) {
+		orderbookPanel.buyBtnTxt = model.memeInfo.symbol
+		return
 	}
-
-	let hash = await model.walletClient.writeContract({
-		address: model.SERVICE_ADDR,
-		abi: serviceJson.abi,
-		functionName: 'placeOrder',
-		args: [model.USDT_MEME_ADDR, usdtIn, memeWant],
-		account: model.walletClient.account
-	})
-
+	
+	orderbookPanel.buyBtnTxt = model.memeInfo.symbol
+	
 	//insert PendingOrder
 	let pendingOrder = {
-		date: 'Committing',
+		date: 'Updating',
 		pair: model.memeInfo.symbol + '/' + model.usdtInfo.symbol,
 		side: 'Buy',
 		amount: util.maxPrecision(viem.formatUnits(memeWant, model.memeInfo.decimals), 5),
@@ -273,14 +316,22 @@ async function placeBuyOrder(usdtIn, memeWant) {
 		filled: '0%'
 	}
 	pendingOrder.price = util.maxPrecision(pendingOrder.total / pendingOrder.amount, 5)
-	
-	model.unwatchEvents()
 	myOrderPanel.insertPendingOrder(pendingOrder)
-	let tx = await model.publicClient.waitForTransactionReceipt({ confirmations, hash })
+	
+	let tx
+	try {
+		tx = await model.publicClient.waitForTransactionReceipt({ confirmations: model.confirmations, hash })
+	} catch(e) {
+		dialog.showError('Network Error')
+		myOrderPanel.removePendingOrder(pendingOrder, true)
+		return
+	}
+	
 	if (tx.status == 'success') {
-		model.getChanges()
+		balloon.show('Tx Success', 'https://sepolia.uniscan.xyz/tx/' + hash)
+		myOrderPanel.removePendingOrder(pendingOrder, false)
 	} else {
-		myOrderPanel.removePendingOrder(pendingOrder)
-		dialog.showError('Tx is failed')
+		dialog.showError('Tx Fail')
+		myOrderPanel.removePendingOrder(pendingOrder, true)
 	}
 }

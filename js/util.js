@@ -30,39 +30,53 @@ export function toDateStr(time) {
 }
 
 
-export function loading(ref, str) {
-	let loadingStr = '-\\|/'
-	let startTime = Date.now()
-	let startStr = ref.value
-	let i = 1
-	console.log('ref:', ref)
-	ref.value = str.replaceAll('*', loadingStr.charAt(0))
+let refToInfo = new Map()
+const loadingStr = '-\\|/'
+export function loading(ref, startStr) {
+	let info = refToInfo.get(ref)
+	if (info) {
+		console.log('refToInfo:', refToInfo)
+		console.log('ref:', ref)
+		console.log('info:', info)
+		info.startTime = Date.now()
+		info.startStr = startStr
+		console.log('loading 1 startTime', info.startTime, startStr, ref.value)
+		return
+	}
+	
+	info = {
+		startTime: Date.now(),
+		startStr,
+		nowStr: startStr.replaceAll('*', loadingStr.charAt(0)),
+		i: 1
+	}
+	console.log('loading 0 startTime', info.startTime, startStr)
+	refToInfo.set(ref, info)
+	ref.value = info.nowStr
 	
 	let interval = setInterval(function() {
-		if (Date.now() - startTime > 9000) {
+		if (info.nowStr != ref.value) {
+			console.log('loading clear startTime', info.startTime, startStr, info.nowStr, ref.value)
 			clearInterval(interval)
-			ref.value = startStr
+			refToInfo.delete(ref)
 			return
 		}
-		let nowStr = ref.value
-		let clear = true
-		for (let c=0; c<loadingStr.length; c++) {
-			let char = loadingStr.charAt(c)
-			if (nowStr.indexOf(char) > -1) {
-				clear = false
-				break
-			}
+		
+		if (Date.now() - info.startTime > 10000) {
+			console.log('loading loop startTime', info.startTime, startStr)
+			clearInterval(interval)
+			info.nowStr = info.startStr.replaceAll('*', '').trim()
+			ref.value = info.nowStr
+			refToInfo.delete(ref)
+			return
 		}
 		
-		if (clear) {
-			clearInterval(interval)
-		} else {
-			ref.value = str.replaceAll('*', loadingStr.charAt(i))
-			console.log(ref.value, nowStr)
-			i++
-			if (i == loadingStr.length) {
-				i = 0
-			}
+		info.nowStr = info.startStr.replaceAll('*', loadingStr.charAt(info.i))
+		ref.value = info.nowStr
+		console.log(info.nowStr)
+		info.i++
+		if (info.i == loadingStr.length) {
+			info.i = 0
 		}
 	}, 100)
 }
