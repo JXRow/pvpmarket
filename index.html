@@ -44,9 +44,9 @@
 		<div style="margin-left: auto; margin-right: auto; width: fit-content;">
 			<div v-cloak id="balancePanel">
 				<i class="nes-icon coin"
-					style="margin-bottom: 0.5rem; margin-left: 37rem;"></i><span @click="onUSDTClick">x{{ usdt }}</span>
+					style="margin-bottom: 0.5rem; margin-left: 37rem;"></i><span class="nes-pointer" @click="onUSDTClick">x{{ usdt }}</span>
 				<i class="nes-icon heart"
-					style="margin-bottom: 0.5rem; margin-left: 1rem;"></i><span @click="onMEMEClick">x{{ meme }}</span>
+					style="margin-bottom: 0.5rem; margin-left: 1rem;"></i><span class="nes-pointer" @click="onMEMEClick">x{{ meme }}</span>
 			</div>
 			<br />
 
@@ -62,8 +62,8 @@
 							</tr>
 						</thead>
 						<tbody>
-							<tr class="nes-text" :class="{ 'is-error': order.color=='red', 'is-success': order.color=='green' }" v-for="order of orders">
-								<td @click="onPriceClick(order)">{{ order.color ? toPrecision(order.price, 6) : maxPrecision(order.price, 6) }}</td>
+							<tr class="nes-text" :class="{ 'is-error': order.color=='red', 'is-success': order.color=='green', 'nes-pointer': order.amount != '' }" v-for="order of orders" @click="onPriceClick(order)">
+								<td>{{ order.color ? toPrecision(order.price, 6) : maxPrecision(order.price, 6) }}</td>
 								<td style="text-align: center;">{{ toPrecision(order.amount, 6) }}</td>
 								<td style="text-align: right;">{{ toPrecision(order.total, 6) }}</td>
 							</tr>

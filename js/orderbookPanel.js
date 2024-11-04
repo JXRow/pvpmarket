@@ -76,11 +76,10 @@ const orderbookPanel = createApp({
 		}
 		
 		function onPriceClick(order) {
-			if (order.color == 'red') {
-				setSellPrice(order.price)
-			} else if (order.color == 'green') {
-				setBuyPrice(order.price)
-			}
+			if (isNaN(order.price)) return
+			
+			setSellPrice(order.price)
+			setBuyPrice(order.price)
 		}
 
 		return {
