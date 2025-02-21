@@ -6,9 +6,9 @@ import tradeJson from './abi/MonoTrade.json' with { type: "json" }
 import * as dialog from './dialog.js'
 
 export const USDs = {
-	'0x99b52F524B70CD0c93BD592b1843Bf2f49a5FE75': 'USDT'
+	'0x6d288698986a3b1c1286fb074c45ac2f10409e28': 'USDT'
 }
-export const SERVICE_ADDR = '0x9260bb1a28a1fd9f8dbd4386577003b51bb07fa6'
+export const SERVICE_ADDR = '0x36c2a57bdb0ce4082da82a1a8e84ae5f490f0134'
 export const MAX_UINT32 = 4294967295
 export const confirmations = 2
 
@@ -35,6 +35,8 @@ export async function reset(_initTrdeAddr, _publicClient, _walletClient) {
 	walletClient = _walletClient
 	
 	await getTradeInfo()
+	console.log('USDT_ADDR:', USDT_ADDR)
+	console.log('MEME_ADDR:', MEME_ADDR)
 }
 
 
@@ -51,11 +53,10 @@ async function getTradeInfo() {
 			{ ...tradeWagmi, functionName: 'fee' },
 		]
 	})
-	if ( USDs[arr[1].result] ) {
+	if ( USDs[arr[1].result.toLowerCase()] ) {
 		MEME_ADDR = arr[0].result
 		USDT_ADDR = arr[1].result
 		fee = arr[2].result
-		const feeTo = '0x50D8aD8e7CC0C9c2236Aac2D2c5141C164168da3'
 		
 		MEME_USDT_ADDR = initTrdeAddr
 		
@@ -64,10 +65,9 @@ async function getTradeInfo() {
 			[
 			  { type: 'address' },
 			  { type: 'address' },
-			  { type: 'uint8' },
-			  { type: 'address' }
+			  { type: 'uint8' }
 			],
-			[USDT_ADDR, MEME_ADDR, fee, feeTo]
+			[USDT_ADDR, MEME_ADDR, fee]
 		)
 		let bytecodeHash = viem.keccak256(
 			viem.encodePacked(
@@ -192,10 +192,14 @@ async function getBalance() {
 	
 	let usdtDelta = 0n
 	if (usdtInfo.balance) {
+		// console.log('arr[0].result:', arr[0].result)
+		// console.log('usdtInfo.balance', usdtInfo.balance)
 		usdtDelta = arr[0].result - usdtInfo.balance
 	}
 	let memeDelta = 0n
 	if (memeInfo.balance) {
+		// console.log('arr[2].result:', arr[2].result)
+		// console.log('memeInfo.balance', memeInfo.balance)
 		memeDelta = arr[2].result - memeInfo.balance
 	}
 	
@@ -223,8 +227,8 @@ async function getOrderList() {
 	})
 	sellOrders = sellOrders.filter(function(order) {
 		let progress = (MAX_UINT32 - order.progress) / MAX_UINT32
-		order.amount = parseFloat(viem.formatUnits(order.amountIn, memeInfo.decimals)) * progress
-		order.total = parseFloat(viem.formatUnits(order.amountOut, usdtInfo.decimals)) * progress
+		order.amount = parseFloat(viem.formatUnits(order.token1In, memeInfo.decimals)) * progress
+		order.total = parseFloat(viem.formatUnits(order.token0Out, usdtInfo.decimals)) * progress
 		order.price = order.total / order.amount
 		order.color = 'red'
 		return order.orderId > 0
@@ -241,8 +245,8 @@ async function getOrderList() {
 	})
 	buyOrders = buyOrders.filter(function(order) {
 		let progress = (MAX_UINT32 - order.progress) / MAX_UINT32
-		order.amount = parseFloat(viem.formatUnits(order.amountOut, memeInfo.decimals)) * progress
-		order.total = parseFloat(viem.formatUnits(order.amountIn, usdtInfo.decimals)) * progress
+		order.amount = parseFloat(viem.formatUnits(order.token0Out, memeInfo.decimals)) * progress
+		order.total = parseFloat(viem.formatUnits(order.token1In, usdtInfo.decimals)) * progress
 		order.price = order.total / order.amount
 		order.color = 'green'
 		return order.orderId > 0
@@ -261,46 +265,33 @@ async function getUserOrders(_Interval) {
 		args: [walletClient.account.address, lastIndex, num],
 		functionName: 'getUserOrders',
 	})
-	// userOrderArr:[{
-	//     index: 7,
-	//     trade: '0x566137bC9A4a28214B4407dd6dE8bff291C4C21F',
-	//     token0: '0xD6B0cD180639D9464f51A0ECb816A22ADd26f701',
-	//     token1: '0x89491dd50EdbEE8CaAE912cbA162a6b2C6aC69ce',
-	//     orderId: 4,
-	//     createTime: 1725165097,
-	//     amountIn: 100000000000000000000n,
-	//     amountOut: 130000000n,
-	//     progress: 0,
-	//     isRemoved: false
-	//   },
-	//   ...
-	// ]
 	
 	userOrderArr = userOrderArr.filter(function(order) {
 		order.pair = memeInfo.symbol + '/' + usdtInfo.symbol
 		if (order.orderId == 0) {
 			order.type = 'Take'
-			if (USDs[order.token0]) {
+			if (order.token0Symbol == 'USDT') {
 				order.side = 'Buy'
-				order.amount = parseFloat(viem.formatUnits(order.amountOut, memeInfo.decimals))
-				order.total = parseFloat(viem.formatUnits(order.amountIn, usdtInfo.decimals))
+				order.amount = parseFloat(viem.formatUnits(order.tokenOut, memeInfo.decimals))
+				order.total = parseFloat(viem.formatUnits(order.tokenIn, usdtInfo.decimals))
 			} else {
 				order.side = 'Sell'
-				order.amount = parseFloat(viem.formatUnits(order.amountIn, memeInfo.decimals))
-				order.total = parseFloat(viem.formatUnits(order.amountOut, usdtInfo.decimals))
+				order.amount = parseFloat(viem.formatUnits(order.tokenIn, memeInfo.decimals))
+				order.total = parseFloat(viem.formatUnits(order.tokenOut, usdtInfo.decimals))
 			}
 		} else {
 			order.type = 'Make'
-			if (USDs[order.token1]) {
+			if (order.token1Symbol == 'USDT') {
 				order.side = 'Buy'
-				order.amount = parseFloat(viem.formatUnits(order.amountOut, memeInfo.decimals))
-				order.total = parseFloat(viem.formatUnits(order.amountIn, usdtInfo.decimals))
+				order.amount = parseFloat(viem.formatUnits(order.tokenOut, memeInfo.decimals))
+				order.total = parseFloat(viem.formatUnits(order.tokenIn, usdtInfo.decimals))
 			} else {
 				order.side = 'Sell'
-				order.amount = parseFloat(viem.formatUnits(order.amountIn, memeInfo.decimals))
-				order.total = parseFloat(viem.formatUnits(order.amountOut, usdtInfo.decimals))
+				order.amount = parseFloat(viem.formatUnits(order.tokenIn, memeInfo.decimals))
+				order.total = parseFloat(viem.formatUnits(order.tokenOut, usdtInfo.decimals))
 			}
 		}
+		console.log(order.type, order.side, order.tokenOut, memeInfo.decimals, order.amount, order.total)
 		order.price = order.total / order.amount
 		order.filled = parseFloat(order.progress / MAX_UINT32)
 		if (order.progress == MAX_UINT32) {

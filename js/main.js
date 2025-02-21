@@ -12,9 +12,9 @@ import * as balancePanel from './balancePanel.js'
 import * as orderbookPanel from './orderbookPanel.js'
 import * as myOrderPanel from './myOrderPanel.js'
 
-const monadDevnet = viem.defineChain({
-    id: 41454,
-    name: 'Monad Devnet',
+const monadTestnet = viem.defineChain({
+    id: 10143,
+    name: 'Monad Testnet',
     nativeCurrency: {
         decimals: 18,
         name: 'Monad',
@@ -22,15 +22,16 @@ const monadDevnet = viem.defineChain({
     },
     rpcUrls: {
         default: {
-            http: ['https://monad.devnet101.com/rpc/myU75Ctvm8IZpuvuX5diRNZOOKXVgmQH']
+            http: ['https://testnet-rpc.monad.xyz/']
         },
     },
     blockExplorers: {
-        default: { name: 'Explorer', url: 'https://blockscout.devnet101.com/' },
+        default: { name: 'Explorer', url: 'https://monad-testnet.socialscan.io/' },
     },
     contracts: {
         multicall3: {
-            address: '0x6009234967b1c7872de00bb3f3e77610b8d6dc9e',
+            address: '0xa877a2247b318b40935e102926ba5ff4f3b0e8b1',
+            // blockCreated: 5882,
         },
     },
 })
@@ -49,9 +50,17 @@ const monadDevnet = viem.defineChain({
 // var USDT_MEME_ADDR = '0xB2129Db9ed160e01CdeBB01EdD7f01774810a178'
 // var MEME_USDT_ADDR = '0x6eE62a29eaDfFb1e27d5C9525a3C3540D8264652'
 
-unichainSepolia.initTrdeAddr = '0x9b16489771c8D3DaD4aA8e09A6B540B0A02D24F6'
-monadDevnet.initTrdeAddr = '0x6eE62a29eaDfFb1e27d5C9525a3C3540D8264652'
-var currChain = unichainSepolia
+//monadTestnet 2025/2/20
+// var USDT_ADDR = '0x6d288698986a3b1c1286fb074c45ac2f10409e28'
+// var MEME_ADDR = '0x072777f02ad827079f188d8175fb155b0e75343d'
+// var SERVICE_ADDR = '0x36c2a57bdb0ce4082da82a1a8e84ae5f490f0134'
+// var USDT_MEME_ADDR = '0xd315D242c31de0ecbE15eCAf0f1D6B729A9bE9F4'
+// var MEME_USDT_ADDR = '0x1b09c7013a439dFdDC0453bEc454BCD2b3Fb7fFD'
+
+// unichainSepolia.initTrdeAddr = '0x9b16489771c8D3DaD4aA8e09A6B540B0A02D24F6'
+// monadDevnet.initTrdeAddr = '0x6eE62a29eaDfFb1e27d5C9525a3C3540D8264652'
+monadTestnet.initTrdeAddr = '0x1b09c7013a439dFdDC0453bEc454BCD2b3Fb7fFD'
+var currChain = monadTestnet
 
 var publicClient
 var walletClient
@@ -86,8 +95,8 @@ async function switchChain(e) {
 			currChain = unichainSepolia
 			await createConnect()
 			break;
-		case '41454':
-			currChain = monadDevnet
+		case '10143':
+			currChain = monadTestnet
 			await createConnect()
 			break;
 	}
@@ -133,6 +142,13 @@ async function createConnect() {
 				transport: viem.custom(window.ethereum)
 			})
 		}
+		
+		await window.ethereum.request({
+			method: "wallet_switchEthereumChain",
+			params: [{
+				chainId: '0x' + currChain.id.toString(16)
+			}]
+		})
 	} catch(e) {
 		dialog.showError('Connect wallet failed')
 		titlePanel.connect = 'Connect'
@@ -167,7 +183,7 @@ async function claim() {
 	})
 
 	await model.publicClient.waitForTransactionReceipt({ confirmations, hash })
-	dialog.showTip('100 USDT and 100 MEME have sent to you')
+	dialog.showTip('100 USDT and 100 MEME had sent to you')
 	model.getChanges()
 }
 

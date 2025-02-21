@@ -35,12 +35,12 @@ const loadingStr = '-\\|/'
 export function loading(ref, startStr) {
 	let info = refToInfo.get(ref)
 	if (info) {
-		console.log('refToInfo:', refToInfo)
-		console.log('ref:', ref)
-		console.log('info:', info)
+		// console.log('refToInfo:', refToInfo)
+		// console.log('ref:', ref)
+		// console.log('info:', info)
 		info.startTime = Date.now()
 		info.startStr = startStr
-		console.log('loading 1 startTime', info.startTime, startStr, ref.value)
+		// console.log('loading 1 startTime', info.startTime, startStr, ref.value)
 		return
 	}
 	
@@ -50,20 +50,20 @@ export function loading(ref, startStr) {
 		nowStr: startStr.replaceAll('*', loadingStr.charAt(0)),
 		i: 1
 	}
-	console.log('loading 0 startTime', info.startTime, startStr)
+	// console.log('loading 0 startTime', info.startTime, startStr)
 	refToInfo.set(ref, info)
 	ref.value = info.nowStr
 	
 	let interval = setInterval(function() {
 		if (info.nowStr != ref.value) {
-			console.log('loading clear startTime', info.startTime, startStr, info.nowStr, ref.value)
+			// console.log('loading clear startTime', info.startTime, startStr, info.nowStr, ref.value)
 			clearInterval(interval)
 			refToInfo.delete(ref)
 			return
 		}
 		
 		if (Date.now() - info.startTime > 10000) {
-			console.log('loading loop startTime', info.startTime, startStr)
+			// console.log('loading loop startTime', info.startTime, startStr)
 			clearInterval(interval)
 			info.nowStr = info.startStr.replaceAll('*', '').trim()
 			ref.value = info.nowStr
@@ -73,7 +73,7 @@ export function loading(ref, startStr) {
 		
 		info.nowStr = info.startStr.replaceAll('*', loadingStr.charAt(info.i))
 		ref.value = info.nowStr
-		console.log(info.nowStr)
+		// console.log(info.nowStr)
 		info.i++
 		if (info.i == loadingStr.length) {
 			info.i = 0
