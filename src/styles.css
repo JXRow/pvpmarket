@@ -783,7 +783,7 @@ button:active {
   right: -24px;
   z-index: 46;
   width: min(340px, calc(100vw - 64px));
-  padding: 18px 20px;
+  padding: 18px 44px 18px 20px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 28px;
   color: var(--text);
