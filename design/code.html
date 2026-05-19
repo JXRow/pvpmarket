@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>DeFi.Pro - Trade</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary-fixed-variant": "#4d00d2",
+                        "tertiary-fixed": "#80fc87",
+                        "outline": "#ac878f",
+                        "primary-fixed": "#ffd9e0",
+                        "inverse-on-surface": "#2c303c",
+                        "surface": "#0f131e",
+                        "surface-container-high": "#262a36",
+                        "on-surface": "#dfe2f2",
+                        "surface-container-highest": "#313441",
+                        "inverse-primary": "#bb0058",
+                        "surface-container-lowest": "#0a0e19",
+                        "on-background": "#dfe2f2",
+                        "tertiary-container": "#22a63e",
+                        "inverse-surface": "#dfe2f2",
+                        "on-primary-fixed": "#3f0019",
+                        "error-container": "#93000a",
+                        "surface-tint": "#ffb1c3",
+                        "on-secondary-container": "#c2b1ff",
+                        "on-secondary-fixed": "#1f0060",
+                        "outline-variant": "#5c3f45",
+                        "on-primary-container": "#590026",
+                        "on-surface-variant": "#e5bcc4",
+                        "secondary-container": "#5200de",
+                        "on-tertiary": "#00390d",
+                        "primary-fixed-dim": "#ffb1c3",
+                        "on-tertiary-fixed": "#002105",
+                        "surface-dim": "#0f131e",
+                        "on-primary-fixed-variant": "#8f0041",
+                        "on-tertiary-fixed-variant": "#005317",
+                        "on-tertiary-container": "#00320a",
+                        "surface-container-low": "#171b27",
+                        "on-secondary": "#350097",
+                        "on-primary": "#66002c",
+                        "on-error-container": "#ffdad6",
+                        "secondary": "#ccbeff",
+                        "primary-container": "#ff4b89",
+                        "background": "#0f131e",
+                        "on-error": "#690005",
+                        "secondary-fixed": "#e7deff",
+                        "surface-container": "#1b1f2b",
+                        "secondary-fixed-dim": "#ccbeff",
+                        "tertiary-fixed-dim": "#64df6e",
+                        "surface-variant": "#313441",
+                        "tertiary": "#64df6e",
+                        "primary": "#ffb1c3",
+                        "surface-bright": "#353945",
+                        "error": "#ffb4ab"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "md": "20px",
+                        "xs": "4px",
+                        "sm": "12px",
+                        "container-padding": "24px",
+                        "base": "8px",
+                        "xl": "48px",
+                        "gutter": "16px",
+                        "lg": "32px"
+                    },
+                    "fontFamily": {
+                        "label-sm": ["Inter"],
+                        "mono-data": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "title-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-sm": ["14px", { "lineHeight": "1.4", "letterSpacing": "0.02em", "fontWeight": "500" }],
+                        "mono-data": ["14px", { "lineHeight": "1.2", "letterSpacing": "0", "fontWeight": "400" }],
+                        "display-lg": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "1.6", "letterSpacing": "0", "fontWeight": "400" }],
+                        "title-md": ["20px", { "lineHeight": "1.4", "letterSpacing": "-0.01em", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(38, 42, 54, 0.4);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .order-row:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface min-h-screen flex flex-col font-body-md">
+<!-- TopNavBar Component -->
+<nav class="bg-surface/80 backdrop-blur-xl docked full-width top-0 sticky border-b border-outline-variant/10 flex justify-between items-center px-container-padding h-16 w-full max-w-full mx-auto z-50">
+<div class="flex items-center gap-lg">
+<a class="text-title-md font-headline-lg text-primary" href="#">DeFi.Pro</a>
+<div class="hidden md:flex gap-sm">
+<a class="text-on-surface font-bold border-b-2 border-primary pb-1 text-label-sm font-label-sm" href="#">Swap</a>
+<a class="text-on-surface-variant hover:text-on-surface transition-colors hover:bg-surface-container-high/50 rounded-lg px-3 py-1 text-label-sm font-label-sm" href="#">Tokens</a>
+<a class="text-on-surface-variant hover:text-on-surface transition-colors hover:bg-surface-container-high/50 rounded-lg px-3 py-1 text-label-sm font-label-sm" href="#">Pool</a>
+<a class="text-on-surface-variant hover:text-on-surface transition-colors hover:bg-surface-container-high/50 rounded-lg px-3 py-1 text-label-sm font-label-sm" href="#">Activity</a>
+</div>
+</div>
+<div class="flex items-center gap-md">
+<button class="hidden md:flex bg-primary-container text-on-primary-container px-4 py-2 rounded-lg text-label-sm font-label-sm hover:bg-primary transition-colors">
+                Connect Wallet
+            </button>
+<button class="md:hidden text-on-surface">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</div>
+</nav>
+<!-- Main Content -->
+<main class="flex-grow p-container-padding max-w-[1600px] mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+<!-- Left Column: Order Book (4 cols) -->
+<div class="lg:col-span-4 glass-panel rounded-lg p-md flex flex-col gap-sm h-[600px]">
+<h2 class="text-title-md font-title-md mb-xs">Order Book</h2>
+<div class="flex justify-between text-on-surface-variant text-label-sm font-label-sm border-b border-outline-variant/20 pb-2">
+<span class="text-left w-1/3">Price(USDC)</span>
+<span class="text-right w-1/3">Size(ETH)</span>
+<span class="text-right w-1/3">Total(USDC)</span>
+</div>
+<!-- Asks (Sells) -->
+<div class="flex-1 overflow-y-auto flex flex-col-reverse text-mono-data font-mono-data text-error">
+<div class="flex justify-between py-1 order-row cursor-pointer relative">
+<div class="absolute right-0 top-0 bottom-0 bg-error/10 z-0" style="width: 85%;"></div>
+<span class="text-left w-1/3 z-10 relative">2,456.80</span>
+<span class="text-right w-1/3 text-on-surface z-10 relative">1.250</span>
+<span class="text-right w-1/3 text-on-surface-variant z-10 relative">3,071.00</span>
+</div>
+<div class="flex justify-between py-1 order-row cursor-pointer relative">
+<div class="absolute right-0 top-0 bottom-0 bg-error/10 z-0" style="width: 60%;"></div>
+<span class="text-left w-1/3 z-10 relative">2,456.50</span>
+<span class="text-right w-1/3 text-on-surface z-10 relative">0.800</span>
+<span class="text-right w-1/3 text-on-surface-variant z-10 relative">1,965.20</span>
+</div>
+<div class="flex justify-between py-1 order-row cursor-pointer relative">
+<div class="absolute right-0 top-0 bottom-0 bg-error/10 z-0" style="width: 40%;"></div>
+<span class="text-left w-1/3 z-10 relative">2,456.20</span>
+<span class="text-right w-1/3 text-on-surface z-10 relative">0.500</span>
+<span class="text-right w-1/3 text-on-surface-variant z-10 relative">1,228.10</span>
+</div>
+<div class="flex justify-between py-1 order-row cursor-pointer relative">
+<div class="absolute right-0 top-0 bottom-0 bg-error/10 z-0" style="width: 25%;"></div>
+<span class="text-left w-1/3 z-10 relative">2,455.90</span>
+<span class="text-right w-1/3 text-on-surface z-10 relative">0.250</span>
+<span class="text-right w-1/3 text-on-surface-variant z-10 relative">613.97</span>
+</div>
+<div class="flex justify-between py-1 order-row cursor-pointer relative">
+<div class="absolute right-0 top-0 bottom-0 bg-error/10 z-0" style="width: 15%;"></div>
+<span class="text-left w-1/3 z-10 relative">2,455.75</span>
+<span class="text-right w-1/3 text-on-surface z-10 relative">0.100</span>
+<span class="text-right w-1/3 text-on-surface-variant z-10 relative">245.57</span>
+</div>
+</div>
+<!-- Current Price Spread -->
+<div class="py-sm my-xs border-y border-outline-variant/20 flex justify-between items-center text-headline-lg font-headline-lg">
+<span class="text-tertiary">2,455.50</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined" style="font-size: 16px;">arrow_upward</span>
+                    $2,455.50
+                </span>
+</div>
+<!-- Bids (Buys) -->
+<div class="flex-1 overflow-y-auto flex flex-col text-mono-data font-mono-data text-tertiary">
+<div class="flex justify-between py-1 order-row cursor-pointer relative">
+<div class="absolute right-0 top-0 bottom-0 bg-tertiary/10 z-0" style="width: 20%;"></div>
+<span class="text-left w-1/3 z-10 relative">2,455.20</span>
+<span class="text-right w-1/3 text-on-surface z-10 relative">0.150</span>
+<span class="text-right w-1/3 text-on-surface-variant z-10 relative">368.28</span>
+</div>
+<div class="flex justify-between py-1 order-row cursor-pointer relative">
+<div class="absolute right-0 top-0 bottom-0 bg-tertiary/10 z-0" style="width: 35%;"></div>
+<span class="text-left w-1/3 z-10 relative">2,455.00</span>
+<span class="text-right w-1/3 text-on-surface z-10 relative">0.400</span>
+<span class="text-right w-1/3 text-on-surface-variant z-10 relative">982.00</span>
+</div>
+<div class="flex justify-between py-1 order-row cursor-pointer relative">
+<div class="absolute right-0 top-0 bottom-0 bg-tertiary/10 z-0" style="width: 50%;"></div>
+<span class="text-left w-1/3 z-10 relative">2,454.80</span>
+<span class="text-right w-1/3 text-on-surface z-10 relative">0.750</span>
+<span class="text-right w-1/3 text-on-surface-variant z-10 relative">1,841.10</span>
+</div>
+<div class="flex justify-between py-1 order-row cursor-pointer relative">
+<div class="absolute right-0 top-0 bottom-0 bg-tertiary/10 z-0" style="width: 70%;"></div>
+<span class="text-left w-1/3 z-10 relative">2,454.50</span>
+<span class="text-right w-1/3 text-on-surface z-10 relative">1.100</span>
+<span class="text-right w-1/3 text-on-surface-variant z-10 relative">2,699.95</span>
+</div>
+<div class="flex justify-between py-1 order-row cursor-pointer relative">
+<div class="absolute right-0 top-0 bottom-0 bg-tertiary/10 z-0" style="width: 90%;"></div>
+<span class="text-left w-1/3 z-10 relative">2,454.00</span>
+<span class="text-right w-1/3 text-on-surface z-10 relative">2.500</span>
+<span class="text-right w-1/3 text-on-surface-variant z-10 relative">6,135.00</span>
+</div>
+</div>
+</div>
+<!-- Middle Column: Trading Panel (5 cols) -->
+<div class="lg:col-span-5 flex flex-col gap-md">
+<div class="glass-panel rounded-lg p-lg h-full flex flex-col">
+<!-- Tabs -->
+<div class="flex bg-surface-container p-1 rounded-lg mb-lg">
+<button class="flex-1 py-3 text-center rounded-md bg-surface text-tertiary font-bold shadow-sm text-label-sm font-label-sm">
+                        Buy
+                    </button>
+<button class="flex-1 py-3 text-center rounded-md text-on-surface-variant hover:text-on-surface text-label-sm font-label-sm transition-colors">
+                        Sell
+                    </button>
+</div>
+<div class="flex justify-between text-label-sm font-label-sm text-on-surface-variant mb-2">
+<span>Avail: 10,450.00 USDC</span>
+<span class="material-symbols-outlined text-[16px] cursor-pointer hover:text-on-surface">account_balance_wallet</span>
+</div>
+<!-- Inputs -->
+<div class="flex flex-col gap-sm mb-lg">
+<div class="bg-surface-container rounded-lg p-sm border border-outline-variant/20 hover:border-outline focus-within:border-primary transition-colors">
+<div class="flex justify-between text-label-sm font-label-sm text-on-surface-variant mb-1">
+<span>Price</span>
+<span>USDC</span>
+</div>
+<input class="w-full bg-transparent border-none text-title-md font-title-md text-on-surface focus:ring-0 p-0" placeholder="0.00" type="text" value="2,455.50"/>
+</div>
+<div class="bg-surface-container rounded-lg p-sm border border-outline-variant/20 hover:border-outline focus-within:border-primary transition-colors">
+<div class="flex justify-between text-label-sm font-label-sm text-on-surface-variant mb-1">
+<span>Amount</span>
+<span>ETH</span>
+</div>
+<input class="w-full bg-transparent border-none text-title-md font-title-md text-on-surface focus:ring-0 p-0" placeholder="0.00" type="text"/>
+</div>
+</div>
+<!-- Percentage Slider (Simulated with chips) -->
+<div class="flex justify-between gap-2 mb-lg">
+<button class="flex-1 py-1 rounded-md bg-surface-container hover:bg-surface-container-high border border-outline-variant/30 text-label-sm font-label-sm text-on-surface-variant hover:text-on-surface">25%</button>
+<button class="flex-1 py-1 rounded-md bg-surface-container hover:bg-surface-container-high border border-outline-variant/30 text-label-sm font-label-sm text-on-surface-variant hover:text-on-surface">50%</button>
+<button class="flex-1 py-1 rounded-md bg-surface-container hover:bg-surface-container-high border border-outline-variant/30 text-label-sm font-label-sm text-on-surface-variant hover:text-on-surface">75%</button>
+<button class="flex-1 py-1 rounded-md bg-surface-container hover:bg-surface-container-high border border-outline-variant/30 text-label-sm font-label-sm text-on-surface-variant hover:text-on-surface">100%</button>
+</div>
+<div class="bg-surface-container rounded-lg p-sm border border-outline-variant/20 mb-lg">
+<div class="flex justify-between text-label-sm font-label-sm text-on-surface-variant mb-1">
+<span>Total</span>
+<span>USDC</span>
+</div>
+<div class="text-title-md font-title-md text-on-surface">0.00</div>
+</div>
+<div class="mt-auto">
+<button class="w-full py-4 rounded-lg bg-tertiary text-on-tertiary text-title-md font-title-md font-bold shadow-[0_0_15px_rgba(100,223,110,0.3)] hover:shadow-[0_0_25px_rgba(100,223,110,0.5)] transition-shadow">
+                        Buy ETH
+                    </button>
+</div>
+</div>
+</div>
+<!-- Right Column: Market Stats (3 cols) -->
+<div class="lg:col-span-3 flex flex-col gap-md">
+<div class="glass-panel rounded-lg p-md h-[250px] flex flex-col">
+<div class="flex items-center gap-sm mb-md">
+<div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">currency_bitcoin</span>
+</div>
+<h2 class="text-title-md font-title-md">ETH-USDC</h2>
+</div>
+<div class="mb-md">
+<div class="text-display-lg font-display-lg text-on-surface">2,455.50</div>
+<div class="text-label-sm font-label-sm text-tertiary flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[16px]">trending_up</span>
+                        +5.24%
+                    </div>
+</div>
+<div class="grid grid-cols-2 gap-sm mt-auto border-t border-outline-variant/20 pt-sm">
+<div>
+<div class="text-label-sm font-label-sm text-on-surface-variant">24h High</div>
+<div class="text-body-md font-body-md">2,510.00</div>
+</div>
+<div>
+<div class="text-label-sm font-label-sm text-on-surface-variant">24h Low</div>
+<div class="text-body-md font-body-md">2,320.50</div>
+</div>
+<div>
+<div class="text-label-sm font-label-sm text-on-surface-variant">24h Vol(ETH)</div>
+<div class="text-body-md font-body-md">45,210</div>
+</div>
+<div>
+<div class="text-label-sm font-label-sm text-on-surface-variant">24h Vol(USDC)</div>
+<div class="text-body-md font-body-md">110.5M</div>
+</div>
+</div>
+</div>
+<!-- Quick swap or info card placeholder -->
+<div class="glass-panel rounded-lg p-md flex-grow flex flex-col items-center justify-center text-center">
+<span class="material-symbols-outlined text-[48px] text-outline-variant mb-sm">candlestick_chart</span>
+<p class="text-label-sm font-label-sm text-on-surface-variant">Chart view disabled</p>
+</div>
+</div>
+<!-- Bottom Section: Activity (Full Width) -->
+<div class="lg:col-span-12 glass-panel rounded-lg p-md mt-sm min-h-[300px]">
+<!-- Tabs -->
+<div class="flex gap-lg border-b border-outline-variant/20 pb-xs mb-sm">
+<button class="text-on-surface text-label-sm font-label-sm font-bold border-b-2 border-primary pb-2 -mb-[3px]">Open Orders (2)</button>
+<button class="text-on-surface-variant hover:text-on-surface text-label-sm font-label-sm pb-2 transition-colors">Order History</button>
+<button class="text-on-surface-variant hover:text-on-surface text-label-sm font-label-sm pb-2 transition-colors">Trade History</button>
+</div>
+<!-- Table Header -->
+<div class="grid grid-cols-7 gap-4 text-label-sm font-label-sm text-on-surface-variant py-2">
+<div>Date</div>
+<div>Pair</div>
+<div>Side</div>
+<div class="text-right">Price</div>
+<div class="text-right">Amount</div>
+<div class="text-right">Filled</div>
+<div class="text-right">Action</div>
+</div>
+<!-- Table Rows -->
+<div class="flex flex-col text-mono-data font-mono-data">
+<div class="grid grid-cols-7 gap-4 py-3 border-b border-outline-variant/10 items-center hover:bg-surface-container-high/30 transition-colors rounded-sm px-1">
+<div class="text-on-surface-variant">10/24 14:32</div>
+<div>ETH-USDC</div>
+<div class="text-tertiary">Buy</div>
+<div class="text-right">2,450.00</div>
+<div class="text-right">1.500</div>
+<div class="text-right">0.00%</div>
+<div class="text-right">
+<button class="text-error hover:text-error-container text-label-sm font-label-sm">Cancel</button>
+</div>
+</div>
+<div class="grid grid-cols-7 gap-4 py-3 border-b border-outline-variant/10 items-center hover:bg-surface-container-high/30 transition-colors rounded-sm px-1">
+<div class="text-on-surface-variant">10/24 10:15</div>
+<div>WBTC-USDC</div>
+<div class="text-error">Sell</div>
+<div class="text-right">65,100.00</div>
+<div class="text-right">0.250</div>
+<div class="text-right">45.00%</div>
+<div class="text-right">
+<button class="text-error hover:text-error-container text-label-sm font-label-sm">Cancel</button>
+</div>
+</div>
+</div>
+<div class="mt-md text-center">
+<button class="text-primary hover:text-primary-container text-label-sm font-label-sm flex items-center justify-center gap-1 mx-auto">
+                    View All <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</main>
+</body></html>
