@@ -237,7 +237,7 @@ export default function App() {
       />
       <main className="dashboard">
         <OrderBook orderbook={orderbook} />
-        <TradePanel />
+        <TradePanel tokenSymbol={orderbook.pairInfo.name.split('-')[0]?.trim() || '---'} />
         <aside className="right-column">
           <MarketStats marketInfo={marketInfo} />
           <ChartPanel />

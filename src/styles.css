@@ -431,6 +431,12 @@ button:active {
   background: var(--surface-container);
 }
 
+.total-readonly {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
 .chips button:hover {
   color: var(--text);
   background: var(--surface-high);

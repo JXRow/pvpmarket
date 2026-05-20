@@ -37,6 +37,8 @@ export let pairInfo = {
 export let balances = {
   native: '---',
   usdc: '---',
+  nativeDecimals: 18,
+  usdcDecimals: 6,
 }
 
 function emit(type, detail) {
@@ -254,6 +256,8 @@ export async function readBalances(networkKey, userAddress) {
   balances = {
     native: formatEther(nativeRawBalance),
     usdc: formatUnits(usdcRawBalance, usdcDecimals),
+    nativeDecimals: network.nativeCurrency.decimals,
+    usdcDecimals,
   }
 
   emit(MODEL_EVENTS.BALANCES_UPDATED, balances)
