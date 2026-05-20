@@ -1,15 +1,12 @@
 import { TrendingUp } from 'lucide-react'
 import OrderRow from './OrderRow'
 import { asks, bids, pairInfo } from '../model/model'
+import { formatNumber } from '../utils/util'
 
 function parseDisplayNumber(value) {
   const number = Number(`${value}`.replaceAll(',', ''))
 
   return Number.isFinite(number) ? number : 0
-}
-
-function formatDisplayNumber(value) {
-  return value.toLocaleString(undefined, { maximumFractionDigits: 8 })
 }
 
 function mergeRowsByPrice(rows) {
@@ -38,9 +35,9 @@ function mergeRowsByPrice(rows) {
 
 function applyDepth(rows, globalMaxTotal) {
   return rows.map((row) => [
-    formatDisplayNumber(row.price),
-    formatDisplayNumber(row.size),
-    formatDisplayNumber(row.total),
+    formatNumber(row.price),
+    formatNumber(row.size),
+    formatNumber(row.total),
     globalMaxTotal > 0 ? Math.max(8, Math.round((row.total / globalMaxTotal) * 100)) : 0,
   ])
 }
