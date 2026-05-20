@@ -528,8 +528,15 @@ button:active {
 .market-change {
   gap: 6px;
   margin-top: 6px;
-  color: var(--green);
   font-weight: 700;
+}
+
+.market-change.up {
+  color: var(--green);
+}
+
+.market-change.down {
+  color: var(--red);
 }
 
 .stats-grid {
