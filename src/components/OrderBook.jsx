@@ -30,20 +30,27 @@ function mergeRowsByPrice(rows) {
     rowMap.set(row[0], current)
   })
 
-  const mergedRows = Array.from(rowMap.values()).slice(0, 5)
-  const maxTotal = Math.max(...mergedRows.map((row) => row.total), 0)
+  const mergedRows = Array.from(rowMap.values())
+  const maxTotal = Math.max(...mergedRows.map((r) => r.total), 0)
 
-  return mergedRows.map((row) => [
+  return { rows: mergedRows, maxTotal }
+}
+
+function applyDepth(rows, globalMaxTotal) {
+  return rows.map((row) => [
     formatDisplayNumber(row.price),
     formatDisplayNumber(row.size),
     formatDisplayNumber(row.total),
-    maxTotal > 0 ? Math.max(8, Math.round((row.total / maxTotal) * 100)) : 0,
+    globalMaxTotal > 0 ? Math.max(8, Math.round((row.total / globalMaxTotal) * 100)) : 0,
   ])
 }
 
 export default function OrderBook({ orderbook = { asks, bids, pairInfo } }) {
   const mergedAsks = mergeRowsByPrice(orderbook.asks)
   const mergedBids = mergeRowsByPrice(orderbook.bids)
+  const globalMaxTotal = Math.max(mergedAsks.maxTotal, mergedBids.maxTotal, 0)
+  const asksWithDepth = applyDepth(mergedAsks.rows.slice(0, 6), globalMaxTotal)
+  const bidsWithDepth = applyDepth(mergedBids.rows.slice(0, 6), globalMaxTotal)
 
   return (
     <section className="card order-book">
@@ -57,14 +64,14 @@ export default function OrderBook({ orderbook = { asks, bids, pairInfo } }) {
         <span>Total</span>
       </div>
       <div className="book-side asks">
-        {mergedAsks.map((row) => <OrderRow key={`${row[0]}-${row[1]}`} row={row} type="ask" />)}
+        {asksWithDepth.map((row) => <OrderRow key={`${row[0]}-${row[1]}`} row={row} type="ask" />)}
       </div>
       <div className="spread-line">
         <strong>{orderbook.pairInfo.spread}</strong>
         <span><TrendingUp size={16} /> ${orderbook.pairInfo.spread}</span>
       </div>
       <div className="book-side bids">
-        {mergedBids.map((row) => <OrderRow key={`${row[0]}-${row[1]}`} row={row} type="bid" />)}
+        {bidsWithDepth.map((row) => <OrderRow key={`${row[0]}-${row[1]}`} row={row} type="bid" />)}
       </div>
     </section>
   )
