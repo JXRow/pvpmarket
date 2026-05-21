@@ -72,8 +72,10 @@ export function createClient(networkKey) {
       rpcUrls: {
         default: { http: [network.rpc] },
       },
+      contracts: network.contracts,
     },
     transport: http(network.rpc),
+    batch: { multicall: true },
   })
 }
 
@@ -97,10 +99,12 @@ export async function readTokenInfo(networkKey, tokenAddress) {
   }
 
   const client = createClient(networkKey)
-  const [symbol, decimals] = await Promise.all([
-    client.readContract({ address, abi: erc20Artifact.abi, functionName: 'symbol' }),
-    client.readContract({ address, abi: erc20Artifact.abi, functionName: 'decimals' }),
-  ])
+  const [symbol, decimals] = await client.multicall({
+    contracts: [
+      { address, abi: erc20Artifact.abi, functionName: 'symbol' },
+      { address, abi: erc20Artifact.abi, functionName: 'decimals' },
+    ],
+  })
 
   return {
     address,
@@ -140,17 +144,11 @@ function toOrderRow(order, tokenInDecimals, tokenOutDecimals, side) {
 }
 
 async function readPendingOrders(client, tradeServiceAddress, tokenIn, tokenOut, tokenInDecimals, tokenOutDecimals, side) {
-  const topOrderId = await client.readContract({
-    address: tradeServiceAddress,
-    abi: tradeServiceArtifact.abi,
-    functionName: 'getPendingOrdersTopId',
-    args: [tokenIn, tokenOut],
-  })
   const pendingOrders = await client.readContract({
     address: tradeServiceAddress,
     abi: tradeServiceArtifact.abi,
     functionName: 'getPendingOrders',
-    args: [tokenIn, tokenOut, topOrderId, ORDER_LIMIT],
+    args: [tokenIn, tokenOut, 0n, ORDER_LIMIT],
   })
 
   return pendingOrders
@@ -168,14 +166,14 @@ export async function readOrderbook(networkKey, tokenAddress = ZERO_ADDRESS) {
     return
   }
 
-  const tokenInfo = await readTokenInfo(networkKey, tokenAddress)
-  const tokenInAddress = tokenInfo.isNative ? ZERO_ADDRESS : tokenInfo.address
   const client = createClient(networkKey)
-  const usdcDecimals = await client.readContract({
-    address: usdcAddress,
-    abi: erc20Artifact.abi,
-    functionName: 'decimals',
-  })
+  const [tokenInfo, [usdcDecimals]] = await Promise.all([
+    readTokenInfo(networkKey, tokenAddress),
+    client.multicall({
+      contracts: [{ address: usdcAddress, abi: erc20Artifact.abi, functionName: 'decimals' }],
+    }),
+  ])
+  const tokenInAddress = tokenInfo.isNative ? ZERO_ADDRESS : tokenInfo.address
   const [nextBids, nextAsks] = await Promise.all([
     readPendingOrders(client, tradeServiceAddress, usdcAddress, tokenInAddress, usdcDecimals, tokenInfo.decimals, 'bid'),
     readPendingOrders(client, tradeServiceAddress, tokenInAddress, usdcAddress, tokenInfo.decimals, usdcDecimals, 'ask'),
@@ -277,17 +275,11 @@ export async function readUserOrders(networkKey, userAddress) {
   }
 
   const client = createClient(networkKey)
-  const userOrdersLength = await client.readContract({
-    address: tradeServiceAddress,
-    abi: tradeServiceArtifact.abi,
-    functionName: 'userOrdersLength',
-    args: [userAddress],
-  })
   const userOrders = await client.readContract({
     address: tradeServiceAddress,
     abi: tradeServiceArtifact.abi,
     functionName: 'getUserOrders',
-    args: [userAddress, userOrdersLength, ORDER_LIMIT],
+    args: [userAddress, 0n, ORDER_LIMIT],
   })
 
   // Collect unique trade addresses and read token info (address, symbol, decimals)
@@ -295,15 +287,17 @@ export async function readUserOrders(networkKey, userAddress) {
     userOrders.map((o) => o.trade).filter((addr) => addr && addr !== ZERO_ADDRESS)
   )]
 
-  const tradeTokens = await Promise.all(
-    uniqueTrades.map(async (trade) => {
-      const [tokenA, tokenB] = await Promise.all([
-        client.readContract({ address: trade, abi: monoTradeArtifact.abi, functionName: 'tokenA' }),
-        client.readContract({ address: trade, abi: monoTradeArtifact.abi, functionName: 'tokenB' }),
-      ])
-      return { trade, tokenA, tokenB }
-    })
-  )
+  const tradeMulticallResults = await client.multicall({
+    contracts: uniqueTrades.flatMap((trade) => [
+      { address: trade, abi: monoTradeArtifact.abi, functionName: 'tokenA' },
+      { address: trade, abi: monoTradeArtifact.abi, functionName: 'tokenB' },
+    ]),
+  })
+  const tradeTokens = uniqueTrades.map((trade, i) => ({
+    trade,
+    tokenA: tradeMulticallResults[i * 2],
+    tokenB: tradeMulticallResults[i * 2 + 1],
+  }))
 
   const tokenAddrSet = new Set()
   tradeTokens.forEach(({ tokenA, tokenB }) => {
@@ -311,12 +305,30 @@ export async function readUserOrders(networkKey, userAddress) {
     tokenAddrSet.add(tokenB)
   })
 
-  const tokenInfos = await Promise.all(
-    [...tokenAddrSet].map(async (addr) => {
-      const info = await readTokenInfo(networkKey, addr)
-      return { addr, symbol: info.symbol, decimals: info.decimals }
-    })
-  )
+  const tokenAddrs = [...tokenAddrSet]
+  const erc20Addrs = tokenAddrs.filter((addr) => addr !== ZERO_ADDRESS)
+  const nativeInfo = getNativeTokenInfo(networkKey)
+
+  const tokenMulticall = erc20Addrs.length > 0
+    ? await client.multicall({
+        contracts: erc20Addrs.flatMap((addr) => [
+          { address: addr, abi: erc20Artifact.abi, functionName: 'symbol' },
+          { address: addr, abi: erc20Artifact.abi, functionName: 'decimals' },
+        ]),
+      })
+    : []
+
+  const tokenInfos = tokenAddrs.map((addr) => {
+    if (addr === ZERO_ADDRESS) {
+      return { addr, symbol: nativeInfo.symbol, decimals: nativeInfo.decimals }
+    }
+    const idx = erc20Addrs.indexOf(addr) * 2
+    return {
+      addr,
+      symbol: tokenMulticall[idx],
+      decimals: tokenMulticall[idx + 1],
+    }
+  })
 
   const tokenMap = new Map(tokenInfos.map((t) => [t.addr, t]))
   const tradeTokenMap = new Map()
@@ -349,11 +361,16 @@ export async function readBalances(networkKey, userAddress) {
   }
 
   const client = createClient(networkKey)
-  const [usdcDecimals, usdcRawBalance, nativeRawBalance] = await Promise.all([
-    client.readContract({ address: usdcAddress, abi: erc20Artifact.abi, functionName: 'decimals' }),
-    client.readContract({ address: usdcAddress, abi: erc20Artifact.abi, functionName: 'balanceOf', args: [userAddress] }),
+  const [usdcResults, nativeRawBalance] = await Promise.all([
+    client.multicall({
+      contracts: [
+        { address: usdcAddress, abi: erc20Artifact.abi, functionName: 'decimals' },
+        { address: usdcAddress, abi: erc20Artifact.abi, functionName: 'balanceOf', args: [userAddress] },
+      ],
+    }),
     client.getBalance({ address: userAddress }),
   ])
+  const [usdcDecimals, usdcRawBalance] = usdcResults
 
   balances = {
     native: formatEther(nativeRawBalance),
