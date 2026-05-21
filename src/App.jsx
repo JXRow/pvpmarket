@@ -17,6 +17,7 @@ import {
   MODEL_EVENTS,
   asks,
   bids,
+  clearUserData,
   loadMarketModel,
   modelEvents,
   orders,
@@ -114,7 +115,8 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    if (!isConnected) {
+    if (!isConnected || !address) {
+      clearUserData()
       setMarketInfo(null)
       return
     }

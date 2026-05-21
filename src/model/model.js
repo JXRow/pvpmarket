@@ -45,6 +45,20 @@ export let balances = {
   usdcDecimals: 6,
 }
 
+export function clearUserData() {
+  balances = {
+    native: '---',
+    usdc: '---',
+    nativeDecimals: 18,
+    usdcDecimals: 6,
+  }
+  orders = []
+  orderHistory = []
+  emit(MODEL_EVENTS.BALANCES_UPDATED, balances)
+  emit(MODEL_EVENTS.USER_ORDERS_UPDATED, orders)
+  emit(MODEL_EVENTS.ORDER_HISTORY_UPDATED, orderHistory)
+}
+
 function emit(type, detail) {
   modelEvents.dispatchEvent(new CustomEvent(type, { detail }))
 }
@@ -99,12 +113,14 @@ export async function readTokenInfo(networkKey, tokenAddress) {
   }
 
   const client = createClient(networkKey)
-  const [symbol, decimals] = await client.multicall({
+  const tokenResults = await client.multicall({
     contracts: [
       { address, abi: erc20Artifact.abi, functionName: 'symbol' },
       { address, abi: erc20Artifact.abi, functionName: 'decimals' },
     ],
   })
+  const symbol = tokenResults[0].result
+  const decimals = tokenResults[1].result
 
   return {
     address,
@@ -167,12 +183,13 @@ export async function readOrderbook(networkKey, tokenAddress = ZERO_ADDRESS) {
   }
 
   const client = createClient(networkKey)
-  const [tokenInfo, [usdcDecimals]] = await Promise.all([
+  const [tokenInfo, [usdcDecimalsRes]] = await Promise.all([
     readTokenInfo(networkKey, tokenAddress),
     client.multicall({
       contracts: [{ address: usdcAddress, abi: erc20Artifact.abi, functionName: 'decimals' }],
     }),
   ])
+  const usdcDecimals = usdcDecimalsRes.result
   const tokenInAddress = tokenInfo.isNative ? ZERO_ADDRESS : tokenInfo.address
   const [nextBids, nextAsks] = await Promise.all([
     readPendingOrders(client, tradeServiceAddress, usdcAddress, tokenInAddress, usdcDecimals, tokenInfo.decimals, 'bid'),
@@ -275,11 +292,24 @@ export async function readUserOrders(networkKey, userAddress) {
   }
 
   const client = createClient(networkKey)
+  const [userOrdersLengthRes] = await client.multicall({
+    contracts: [
+      { address: tradeServiceAddress, abi: tradeServiceArtifact.abi, functionName: 'userOrdersLength', args: [userAddress] },
+    ],
+  })
+  const userOrdersLength = userOrdersLengthRes.result
+  if (userOrdersLength == 0) {
+    orders = []
+    orderHistory = []
+    emit(MODEL_EVENTS.USER_ORDERS_UPDATED, orders)
+    emit(MODEL_EVENTS.ORDER_HISTORY_UPDATED, orderHistory)
+    return
+  }
   const userOrders = await client.readContract({
     address: tradeServiceAddress,
     abi: tradeServiceArtifact.abi,
     functionName: 'getUserOrders',
-    args: [userAddress, 0n, ORDER_LIMIT],
+    args: [userAddress, userOrdersLength, ORDER_LIMIT],
   })
 
   // Collect unique trade addresses and read token info (address, symbol, decimals)
@@ -295,8 +325,8 @@ export async function readUserOrders(networkKey, userAddress) {
   })
   const tradeTokens = uniqueTrades.map((trade, i) => ({
     trade,
-    tokenA: tradeMulticallResults[i * 2],
-    tokenB: tradeMulticallResults[i * 2 + 1],
+    tokenA: tradeMulticallResults[i * 2].result,
+    tokenB: tradeMulticallResults[i * 2 + 1].result,
   }))
 
   const tokenAddrSet = new Set()
@@ -325,8 +355,8 @@ export async function readUserOrders(networkKey, userAddress) {
     const idx = erc20Addrs.indexOf(addr) * 2
     return {
       addr,
-      symbol: tokenMulticall[idx],
-      decimals: tokenMulticall[idx + 1],
+      symbol: tokenMulticall[idx].result,
+      decimals: tokenMulticall[idx + 1].result,
     }
   })
 
@@ -338,7 +368,7 @@ export async function readUserOrders(networkKey, userAddress) {
 
   const nativeSymbol = getNativeTokenInfo(networkKey).symbol
 
-  const validOrders = userOrders.filter((order) => order.index !== 0n)
+  const validOrders = userOrders.filter((order) => order.index != 0)
 
   orders = validOrders
     .filter((order) => !order.isRemoved)
@@ -370,7 +400,8 @@ export async function readBalances(networkKey, userAddress) {
     }),
     client.getBalance({ address: userAddress }),
   ])
-  const [usdcDecimals, usdcRawBalance] = usdcResults
+  const usdcDecimals = usdcResults[0].result
+  const usdcRawBalance = usdcResults[1].result
 
   balances = {
     native: formatEther(nativeRawBalance),
