@@ -1,18 +1,120 @@
+import { useState, useEffect } from 'react'
 import { ArrowRight } from 'lucide-react'
-import { orders as modelOrders } from '../model/model'
+import { useWriteContract } from 'wagmi'
+import {
+  orders as modelOrders,
+  orderHistory as modelHistory,
+  modelEvents,
+  MODEL_EVENTS,
+  createClient,
+  readUserOrders,
+  readOrderbook,
+  readBalances,
+  parseMarketRoute,
+} from '../model/model'
+import monoTradeArtifact from '../model/abi/MonoTrade.json'
 
-export default function MyOrders({ orders = modelOrders }) {
+export default function MyOrders({
+  orders = modelOrders,
+  history = modelHistory,
+  onShowToast,
+  onShowCallout,
+  onHideCallout,
+  onShowDialog,
+  userAddress,
+  networkKey,
+}) {
+  const [activeTab, setActiveTab] = useState('open')
+  const [openOrders, setOpenOrders] = useState(orders)
+  const [orderHistory, setOrderHistory] = useState(history)
+  const [cancellingId, setCancellingId] = useState(null)
+  const { writeContractAsync } = useWriteContract()
+
+  useEffect(() => {
+    function onOrdersUpdated() {
+      setOpenOrders(modelOrders)
+    }
+    function onHistoryUpdated() {
+      setOrderHistory(modelHistory)
+    }
+    modelEvents.addEventListener(MODEL_EVENTS.USER_ORDERS_UPDATED, onOrdersUpdated)
+    modelEvents.addEventListener(MODEL_EVENTS.ORDER_HISTORY_UPDATED, onHistoryUpdated)
+    return () => {
+      modelEvents.removeEventListener(MODEL_EVENTS.USER_ORDERS_UPDATED, onOrdersUpdated)
+      modelEvents.removeEventListener(MODEL_EVENTS.ORDER_HISTORY_UPDATED, onHistoryUpdated)
+    }
+  }, [])
+
+  const isOpen = activeTab === 'open'
+  const displayOrders = isOpen ? openOrders : orderHistory
+
+  async function handleCancel(order) {
+    const trade = order[8]
+    const orderId = order[9]
+    if (!trade || !orderId || orderId === 0n) return
+
+    setCancellingId(order[7])
+    try {
+      onShowCallout({ content: 'Waiting wallet operate...', autoClose: false })
+      
+      const hash = await writeContractAsync({
+        address: trade,
+        abi: monoTradeArtifact.abi,
+        functionName: 'cancelOrder',
+        args: [orderId],
+      })
+      onShowCallout({ content: 'Submitting transaction...', autoClose: false })
+      
+      const client = createClient(networkKey)
+      await client.waitForTransactionReceipt({ hash, confirmations: 1 })
+
+      onShowCallout({ content: 'Transaction confirmed', autoClose: true })
+      const { token: tokenAddress } = parseMarketRoute()
+      await Promise.all([
+        readUserOrders(networkKey, userAddress),
+        readOrderbook(networkKey, tokenAddress),
+        readBalances(networkKey, userAddress),
+      ])
+    } catch (err) {
+      const isRejected =
+        err.name === 'UserRejectedRequestError' ||
+        err.cause?.name === 'UserRejectedRequestError' ||
+        err.cause?.cause?.name === 'UserRejectedRequestError' ||
+        err.code === 4001 ||
+        err.message?.toLowerCase().includes('rejected') ||
+        err.message?.toLowerCase().includes('user denied') ||
+        err.message?.toLowerCase().includes('user rejected')
+
+      onHideCallout()
+      if (isRejected) {
+        onShowToast('Operation cancelled')
+      } else {
+        onShowDialog({
+          title: 'Cancel Order Failed',
+          content: err.message || 'Unknown error',
+          buttons: [{ text: 'OK' }],
+        })
+      }
+    } finally {
+      setCancellingId(null)
+    }
+  }
+
   return (
     <section className="card activity-table">
       <div className="activity-tabs">
-        <button className="active">Open Orders ({orders.length})</button>
-        <button>Order History</button>
+        <button className={isOpen ? 'active' : ''} onClick={() => setActiveTab('open')}>
+          Open Orders ({openOrders.length})
+        </button>
+        <button className={!isOpen ? 'active' : ''} onClick={() => setActiveTab('history')}>
+          Order History ({orderHistory.length})
+        </button>
       </div>
       <div className="table-row table-head">
         <span>Date</span><span>Pair</span><span>Side</span><span>Price</span><span>Amount</span><span>Total</span><span>Filled</span><span>Action</span>
       </div>
-      {orders.map((order) => (
-        <div className="table-row" key={`${order[0]}-${order[1]}`}>
+      {displayOrders.map((order) => (
+        <div className="table-row" key={order[7]}>
           <span>{order[0]}</span>
           <span>{order[1]}</span>
           <span className={order[2] === 'Buy' ? 'green' : 'red'}>{order[2]}</span>
@@ -20,7 +122,16 @@ export default function MyOrders({ orders = modelOrders }) {
           <span>{order[4]}</span>
           <span>{order[5]}</span>
           <span>{order[6]}</span>
-          <button>Cancel</button>
+          {isOpen ? (
+            <button
+              onClick={() => handleCancel(order)}
+              disabled={cancellingId === order[7]}
+            >
+              {cancellingId === order[7] ? '...' : 'Cancel'}
+            </button>
+          ) : (
+            <span>—</span>
+          )}
         </div>
       ))}
       <button className="view-all">View All <ArrowRight size={16} /></button>

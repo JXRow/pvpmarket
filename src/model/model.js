@@ -1,23 +1,27 @@
 import { createPublicClient, formatEther, formatUnits, getAddress, http, isAddress } from 'viem'
 import { networks } from './const'
 import tradeServiceArtifact from './abi/TradeService.json'
+import monoTradeArtifact from './abi/MonoTrade.json'
 import erc20Artifact from './abi/MockERC20.json'
+import { formatNumber } from '../utils/util'
 
 export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 export const modelEvents = new EventTarget()
 export const MODEL_EVENTS = {
   ORDERBOOK_UPDATED: 'orderbook:updated',
   USER_ORDERS_UPDATED: 'user-orders:updated',
+  ORDER_HISTORY_UPDATED: 'order-history:updated',
   BALANCES_UPDATED: 'balances:updated',
   ERROR: 'model:error',
 }
 
-const ORDER_LIMIT = 10
+const ORDER_LIMIT = 20
 const MAX_PROGRESS = 4294967295
 
 export let asks = []
 export let bids = []
 export let orders = []
+export let orderHistory = []
 
 export const marketStats = [
   ['24h Vol(USD)', '---'],
@@ -57,7 +61,7 @@ function getNetwork(networkKey) {
   return networks[networkKey] ?? networks.monad
 }
 
-function createClient(networkKey) {
+export function createClient(networkKey) {
   const network = getNetwork(networkKey)
 
   return createPublicClient({
@@ -194,18 +198,68 @@ function formatUserOrderDate(timestamp) {
   return `${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 
-function toUserOrderRow(order) {
-  const side = order.tokenInSymbol === 'USDC' ? 'Buy' : 'Sell'
+function toUserOrderRow(order, tradeTokenMap, tokenMap, nativeSymbol) {
+  const isBuy = order.tokenInSymbol === 'USDC'
+  const side = isBuy ? 'Buy' : 'Sell'
   const filled = `${((Number(order.progress) / MAX_PROGRESS) * 100).toFixed(2)}%`
+
+  const tokenInDisplay = order.tokenInSymbol === 'NativeToken' ? nativeSymbol : order.tokenInSymbol
+  const tokenOutDisplay = order.tokenOutSymbol === 'NativeToken' ? nativeSymbol : order.tokenOutSymbol
+  const pair = isBuy ? `${tokenOutDisplay}/${tokenInDisplay}` : `${tokenInDisplay}/${tokenOutDisplay}`
+
+  let price = '---'
+  let amount = '---'
+  let total = '---'
+
+  const tradeTokens = tradeTokenMap.get(order.trade)
+  if (tradeTokens) {
+    const { tokenA, tokenB } = tradeTokens
+    const tokenAInfo = tokenMap.get(tokenA)
+    const tokenBInfo = tokenMap.get(tokenB)
+
+    if (tokenAInfo && tokenBInfo) {
+      const normalizedIn = order.tokenInSymbol === 'NativeToken' ? nativeSymbol : order.tokenInSymbol
+      const normalizedOut = order.tokenOutSymbol === 'NativeToken' ? nativeSymbol : order.tokenOutSymbol
+
+      let tokenInAddr, tokenOutAddr
+      if (tokenAInfo.symbol === normalizedIn && tokenBInfo.symbol === normalizedOut) {
+        tokenInAddr = tokenA
+        tokenOutAddr = tokenB
+      } else if (tokenBInfo.symbol === normalizedIn && tokenAInfo.symbol === normalizedOut) {
+        tokenInAddr = tokenB
+        tokenOutAddr = tokenA
+      }
+
+      if (tokenInAddr && tokenOutAddr) {
+        const tokenInInfo = tokenMap.get(tokenInAddr)
+        const tokenOutInfo = tokenMap.get(tokenOutAddr)
+        const amountInHuman = Number(formatUnits(order.amountIn, tokenInInfo.decimals))
+        const amountOutHuman = Number(formatUnits(order.amountOut, tokenOutInfo.decimals))
+
+        if (isBuy) {
+          price = formatNumber(amountInHuman / amountOutHuman)
+          amount = formatNumber(amountOutHuman)
+          total = formatNumber(amountInHuman)
+        } else {
+          price = formatNumber(amountOutHuman / amountInHuman)
+          amount = formatNumber(amountInHuman)
+          total = formatNumber(amountOutHuman)
+        }
+      }
+    }
+  }
 
   return [
     formatUserOrderDate(order.createTime),
-    `${order.tokenOutSymbol === 'NativeToken' ? 'MON' : order.tokenOutSymbol}-USDC`,
+    pair,
     side,
-    '---',
-    order.amountIn.toString(),
-    order.amountOut.toString(),
+    price,
+    amount,
+    total,
     filled,
+    `${order.trade}-${order.index}`,
+    order.trade,
+    order.orderId ?? order[4],
   ]
 }
 
@@ -231,11 +285,54 @@ export async function readUserOrders(networkKey, userAddress) {
     args: [userAddress, userOrdersLength, ORDER_LIMIT],
   })
 
-  orders = userOrders
-    .filter((order) => order.index !== 0n && !order.isRemoved)
-    .map(toUserOrderRow)
+  // Collect unique trade addresses and read token info (address, symbol, decimals)
+  const uniqueTrades = [...new Set(
+    userOrders.map((o) => o.trade).filter((addr) => addr && addr !== ZERO_ADDRESS)
+  )]
+
+  const tradeTokens = await Promise.all(
+    uniqueTrades.map(async (trade) => {
+      const [tokenA, tokenB] = await Promise.all([
+        client.readContract({ address: trade, abi: monoTradeArtifact.abi, functionName: 'tokenA' }),
+        client.readContract({ address: trade, abi: monoTradeArtifact.abi, functionName: 'tokenB' }),
+      ])
+      return { trade, tokenA, tokenB }
+    })
+  )
+
+  const tokenAddrSet = new Set()
+  tradeTokens.forEach(({ tokenA, tokenB }) => {
+    tokenAddrSet.add(tokenA)
+    tokenAddrSet.add(tokenB)
+  })
+
+  const tokenInfos = await Promise.all(
+    [...tokenAddrSet].map(async (addr) => {
+      const info = await readTokenInfo(networkKey, addr)
+      return { addr, symbol: info.symbol, decimals: info.decimals }
+    })
+  )
+
+  const tokenMap = new Map(tokenInfos.map((t) => [t.addr, t]))
+  const tradeTokenMap = new Map()
+  tradeTokens.forEach(({ trade, tokenA, tokenB }) => {
+    tradeTokenMap.set(trade, { tokenA, tokenB })
+  })
+
+  const nativeSymbol = getNativeTokenInfo(networkKey).symbol
+
+  const validOrders = userOrders.filter((order) => order.index !== 0n)
+
+  orders = validOrders
+    .filter((order) => !order.isRemoved)
+    .map((order) => toUserOrderRow(order, tradeTokenMap, tokenMap, nativeSymbol))
+
+  orderHistory = validOrders
+    .filter((order) => order.isRemoved)
+    .map((order) => toUserOrderRow(order, tradeTokenMap, tokenMap, nativeSymbol))
 
   emit(MODEL_EVENTS.USER_ORDERS_UPDATED, orders)
+  emit(MODEL_EVENTS.ORDER_HISTORY_UPDATED, orderHistory)
 }
 
 export async function readBalances(networkKey, userAddress) {

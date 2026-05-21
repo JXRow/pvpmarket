@@ -242,7 +242,15 @@ export default function App() {
           <MarketStats marketInfo={marketInfo} />
           <ChartPanel />
         </aside>
-        <MyOrders orders={userOrders} />
+        <MyOrders
+          orders={userOrders}
+          onShowToast={showToast}
+          onShowCallout={showCallout}
+          onHideCallout={hideCallout}
+          onShowDialog={showDialog}
+          userAddress={address}
+          networkKey={parseMarketRoute().network}
+        />
       </main>
       <div className="ambient one" />
       <div className="ambient two" />
