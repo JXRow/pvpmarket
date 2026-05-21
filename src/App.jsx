@@ -237,7 +237,15 @@ export default function App() {
       />
       <main className="dashboard">
         <OrderBook orderbook={orderbook} />
-        <TradePanel tokenSymbol={orderbook.pairInfo.name.split('-')[0]?.trim() || '---'} />
+        <TradePanel
+          tokenSymbol={orderbook.pairInfo.name.split('-')[0]?.trim() || '---'}
+          onShowToast={showToast}
+          onShowCallout={showCallout}
+          onHideCallout={hideCallout}
+          onShowDialog={showDialog}
+          userAddress={address}
+          networkKey={parseMarketRoute().network}
+        />
         <aside className="right-column">
           <MarketStats marketInfo={marketInfo} />
           <ChartPanel />

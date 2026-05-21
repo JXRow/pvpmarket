@@ -187,6 +187,11 @@ export async function readOrderbook(networkKey, tokenAddress = ZERO_ADDRESS) {
     ...pairInfo,
     name: `${tokenInfo.symbol}-USDC`,
     spread: nextBids[0]?.[0] ?? '---',
+    tokenAddress: tokenInAddress,
+    tokenDecimals: tokenInfo.decimals,
+    usdcAddress,
+    usdcDecimals,
+    tradeServiceAddress,
   }
 
   emit(MODEL_EVENTS.ORDERBOOK_UPDATED, { asks, bids, pairInfo })
