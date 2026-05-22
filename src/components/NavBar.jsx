@@ -16,8 +16,8 @@ export default function NavBar({ onConnect, onShowDialog }) {
         <a className="brand" href="#">PvP Market</a>
         <nav className="nav-links">
           <a className="active" href="#">Trade</a>
-          <a href="#" onClick={(e) => { e.preventDefault(); handleComingSoon('Listing') }}>listing</a>
-          <a href="#" onClick={(e) => { e.preventDefault(); handleComingSoon('Docs') }}>docs</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); handleComingSoon('Listing') }}>Listing</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); handleComingSoon('Docs') }}>Docs</a>
         </nav>
       </div>
       <div className="nav-actions">
