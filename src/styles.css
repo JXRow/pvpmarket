@@ -499,6 +499,16 @@ button:active {
   filter: brightness(1.05) saturate(1.08);
 }
 
+.submit-trade:disabled,
+.submit-trade:disabled:hover {
+  cursor: default;
+  pointer-events: none;
+  transform: none;
+  box-shadow: none;
+  filter: none;
+  opacity: 0.6;
+}
+
 .right-column {
   display: flex;
   flex-direction: column;
@@ -746,6 +756,31 @@ button:active {
 .table-row button:hover {
   color: #ff9aac;
   text-shadow: 0 0 18px rgba(255, 111, 135, 0.5);
+}
+
+.table-row button:disabled,
+.table-row button:disabled:hover {
+  cursor: default;
+  pointer-events: none;
+  transform: none;
+  color: var(--text-dim);
+  text-shadow: none;
+  box-shadow: none;
+}
+
+.table-row button.disabled-action,
+.table-row button.disabled-action:hover {
+  cursor: default;
+  pointer-events: none;
+  color: var(--text-dim);
+  background: transparent;
+  text-shadow: none;
+  box-shadow: none;
+}
+
+.table-row span.disabled-action {
+  color: var(--text-dim);
+  text-align: right;
 }
 
 .view-all:hover {

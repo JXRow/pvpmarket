@@ -260,6 +260,7 @@ export default function App() {
           onShowDialog={showDialog}
           userAddress={address}
           networkKey={parseMarketRoute().network}
+          tokenSymbol={orderbook.pairInfo.name.split('-')[0]?.trim() || '---'}
         />
       </main>
       <div className="ambient one" />

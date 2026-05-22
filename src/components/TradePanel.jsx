@@ -75,9 +75,9 @@ export default function TradePanel({
       <button
         className={`submit-trade ${isBuy ? 'buy' : 'sell'}`}
         onClick={handleSubmit}
-        disabled={submitting || !currentPairInfo.usdcAddress || !currentPairInfo.tokenAddress || !currentPairInfo.tradeServiceAddress}
+        disabled={submitting || tokenSymbol === '---' || !currentPairInfo.usdcAddress || !currentPairInfo.tokenAddress || !currentPairInfo.tradeServiceAddress}
       >
-        {submitting ? '...' : (isBuy ? `Buy ${tokenSymbol}` : `Sell ${tokenSymbol}`)}
+        {submitting ? '...' : (tokenSymbol === '---' ? '---' : (isBuy ? `Buy ${tokenSymbol}` : `Sell ${tokenSymbol}`))}
       </button>
     </section>
   )
@@ -111,9 +111,9 @@ export default function TradePanel({
       return
     }
 
-    const amountInRaw = parseUnits(amount, usdcDecimals)
+    const amountOutRaw = parseUnits(amount, tokenDecimals)
     const priceRaw = parseUnits(price, usdcDecimals)
-    const amountOutRaw = (amountInRaw * 10n**BigInt(tokenDecimals)) / priceRaw
+    const amountInRaw = (amountOutRaw * priceRaw) / 10n**BigInt(tokenDecimals)
 
     const approveData = encodeFunctionData({
       abi: erc20Artifact.abi,

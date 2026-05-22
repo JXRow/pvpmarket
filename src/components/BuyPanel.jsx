@@ -31,7 +31,7 @@ export default function BuyPanel({
     const p = Number(price)
     const a = Number(amount)
     if (!p || !a || p <= 0) return ''
-    return (a / p).toString()
+    return (a * p).toString()
   }, [price, amount])
 
   function handlePriceChange(e) {
@@ -39,16 +39,18 @@ export default function BuyPanel({
   }
 
   function handleAmountChange(e) {
-    const maxDecimals = balances.usdcDecimals ?? 6
+    const maxDecimals = balances.nativeDecimals ?? 18
     onAmountChange(cleanNumberInput(e.target.value, maxDecimals))
   }
 
   function setAmountPercent(percent) {
     const balance = Number(usdc)
-    if (Number.isNaN(balance) || balance <= 0) return
-    const maxDecimals = balances.usdcDecimals ?? 6
+    const p = Number(price)
+    if (Number.isNaN(balance) || balance <= 0 || !p || p <= 0) return
+    const maxDecimals = balances.nativeDecimals ?? 18
     const factor = 10 ** maxDecimals
-    const value = Math.floor(balance * percent * factor) / factor
+    const totalUsdc = balance * percent
+    const value = Math.floor((totalUsdc / p) * factor) / factor
     onAmountChange(value.toString())
   }
 
@@ -70,7 +72,7 @@ export default function BuyPanel({
           />
         </label>
         <label className="trade-field">
-          <span><em>Amount</em><b>USDC</b></span>
+          <span><em>Amount</em><b>{tokenSymbol}</b></span>
           <input
             type="text"
             inputMode="decimal"
@@ -92,7 +94,7 @@ export default function BuyPanel({
           ))}
         </div>
         <div className="trade-field total-readonly">
-          <span><em>Total</em><b>{tokenSymbol}</b></span>
+          <span><em>Total</em><b>USDC</b></span>
           <span>{formatNumber(total)}</span>
         </div>
       </div>

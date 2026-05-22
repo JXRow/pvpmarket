@@ -142,20 +142,23 @@ function formatOrderBookNumber(value) {
 }
 
 function toOrderRow(order, tokenInDecimals, tokenOutDecimals, side) {
-  const amountIn = Number(formatUnits(order.amountIn, tokenInDecimals))
-  const amountWant = Number(formatUnits(order.amountWant, tokenOutDecimals))
-  const price = side === 'bid'
-    ? amountIn / amountWant
-    : amountWant / amountIn
-  const size = side === 'bid' ? amountWant : amountIn
-  const total = price * size
+  const rawAmountIn = Number(formatUnits(order.amountIn, tokenInDecimals))
+  const rawAmountWant = Number(formatUnits(order.amountWant, tokenOutDecimals))
   const progress = Number(order.progress) / MAX_PROGRESS
+  const remaining = 1 - progress
+
+  const price = side === 'bid'
+    ? rawAmountIn / rawAmountWant
+    : rawAmountWant / rawAmountIn
+
+  const size = side === 'bid' ? rawAmountWant * remaining : rawAmountIn * remaining
+  const total = price * size
 
   return [
     formatOrderBookNumber(price),
     formatOrderBookNumber(size),
     formatOrderBookNumber(total),
-    Math.max(8, Math.min(100, Math.round((1 - progress) * 100))),
+    Math.max(8, Math.min(100, Math.round(remaining * 100))),
   ]
 }
 
@@ -214,17 +217,23 @@ export async function readOrderbook(networkKey, tokenAddress = ZERO_ADDRESS) {
 
 function formatUserOrderDate(timestamp) {
   const date = new Date(Number(timestamp) * 1000)
+  const pad = (n) => String(n).padStart(2, '0')
 
-  return `${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+  return `${date.getFullYear()}/${pad(date.getMonth() + 1)}/${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
 }
 
 function toUserOrderRow(order, tradeTokenMap, tokenMap, nativeSymbol) {
-  const isBuy = order.tokenInSymbol === 'USDC'
+  const isTaker = order.orderId == 0
+
+  const tokenInSymbol = isTaker ? order.tokenOutSymbol : order.tokenInSymbol
+  const tokenOutSymbol = isTaker ? order.tokenInSymbol : order.tokenOutSymbol
+
+  const isBuy = tokenInSymbol === 'USDC'
   const side = isBuy ? 'Buy' : 'Sell'
   const filled = `${((Number(order.progress) / MAX_PROGRESS) * 100).toFixed(2)}%`
 
-  const tokenInDisplay = order.tokenInSymbol === 'NativeToken' ? nativeSymbol : order.tokenInSymbol
-  const tokenOutDisplay = order.tokenOutSymbol === 'NativeToken' ? nativeSymbol : order.tokenOutSymbol
+  const tokenInDisplay = tokenInSymbol === 'NativeToken' ? nativeSymbol : tokenInSymbol
+  const tokenOutDisplay = tokenOutSymbol === 'NativeToken' ? nativeSymbol : tokenOutSymbol
   const pair = isBuy ? `${tokenOutDisplay}/${tokenInDisplay}` : `${tokenInDisplay}/${tokenOutDisplay}`
 
   let price = '---'
@@ -238,8 +247,8 @@ function toUserOrderRow(order, tradeTokenMap, tokenMap, nativeSymbol) {
     const tokenBInfo = tokenMap.get(tokenB)
 
     if (tokenAInfo && tokenBInfo) {
-      const normalizedIn = order.tokenInSymbol === 'NativeToken' ? nativeSymbol : order.tokenInSymbol
-      const normalizedOut = order.tokenOutSymbol === 'NativeToken' ? nativeSymbol : order.tokenOutSymbol
+      const normalizedIn = tokenInSymbol === 'NativeToken' ? nativeSymbol : tokenInSymbol
+      const normalizedOut = tokenOutSymbol === 'NativeToken' ? nativeSymbol : tokenOutSymbol
 
       let tokenInAddr, tokenOutAddr
       if (tokenAInfo.symbol === normalizedIn && tokenBInfo.symbol === normalizedOut) {

@@ -23,6 +23,7 @@ export default function MyOrders({
   onShowDialog,
   userAddress,
   networkKey,
+  tokenSymbol = '---',
 }) {
   const [activeTab, setActiveTab] = useState('open')
   const [openOrders, setOpenOrders] = useState(orders)
@@ -49,6 +50,7 @@ export default function MyOrders({
   const displayOrders = isOpen ? openOrders : orderHistory
 
   async function handleCancel(order) {
+    if (cancellingId) return
     const trade = order[8]
     const orderId = order[9]
     if (!trade || !orderId || orderId === 0n) return
@@ -111,29 +113,34 @@ export default function MyOrders({
         </button>
       </div>
       <div className="table-row table-head">
-        <span>Date</span><span>Pair</span><span>Side</span><span>Price</span><span>Amount</span><span>Total</span><span>Filled</span><span>Action</span>
+        <span>Date</span><span>Pair</span><span>Side</span><span>Price</span><span>Amount ({tokenSymbol})</span><span>Total (USDC)</span><span>Filled</span><span>Action</span>
       </div>
-      {displayOrders.map((order) => (
-        <div className="table-row" key={order[7]}>
-          <span>{order[0]}</span>
-          <span>{order[1]}</span>
-          <span className={order[2] === 'Buy' ? 'green' : 'red'}>{order[2]}</span>
-          <span>{order[3]}</span>
-          <span>{order[4]}</span>
-          <span>{order[5]}</span>
-          <span>{order[6]}</span>
-          {isOpen ? (
-            <button
-              onClick={() => handleCancel(order)}
-              disabled={cancellingId === order[7]}
-            >
-              {cancellingId === order[7] ? '...' : 'Cancel'}
-            </button>
-          ) : (
-            <span>—</span>
-          )}
-        </div>
-      ))}
+      {displayOrders.map((order) => {
+        const canCancel = isOpen && order[8] && order[8] !== '---' && order[9] && order[9] !== 0n
+        const isCancelling = cancellingId === order[7]
+        return (
+          <div className="table-row" key={order[7]}>
+            <span>{order[0]}</span>
+            <span>{order[1]}</span>
+            <span className={order[2] === 'Buy' ? 'green' : 'red'}>{order[2]}</span>
+            <span>{order[3]}</span>
+            <span>{order[4]}</span>
+            <span>{order[5]}</span>
+            <span>{order[6]}</span>
+            {isOpen ? (
+              <button
+                className={canCancel ? '' : 'disabled-action'}
+                onClick={() => canCancel && handleCancel(order)}
+                disabled={!canCancel || isCancelling}
+              >
+                {isCancelling ? '...' : (canCancel ? 'Cancel' : '---')}
+              </button>
+            ) : (
+              <span className="disabled-action">—</span>
+            )}
+          </div>
+        )
+      })}
       <button className="view-all">View All <ArrowRight size={16} /></button>
     </section>
   )
