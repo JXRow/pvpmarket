@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useSendCalls, useWriteContract } from 'wagmi'
-import { encodeFunctionData, parseUnits, maxUint256 } from 'viem'
+import { encodeFunctionData, parseUnits } from 'viem'
 import BuyPanel from './BuyPanel'
 import SellPanel from './SellPanel'
 import {
@@ -118,7 +118,7 @@ export default function TradePanel({
     const approveData = encodeFunctionData({
       abi: erc20Artifact.abi,
       functionName: 'approve',
-      args: [tradeServiceAddress, maxUint256],
+      args: [tradeServiceAddress, amountInRaw],
     })
 
     const placeOrderData = encodeFunctionData({
@@ -227,7 +227,7 @@ export default function TradePanel({
         const approveData = encodeFunctionData({
           abi: erc20Artifact.abi,
           functionName: 'approve',
-          args: [tradeServiceAddress, maxUint256],
+          args: [tradeServiceAddress, amountInRaw],
         })
         await sendCallsAsync({
           calls: [
@@ -283,7 +283,7 @@ export default function TradePanel({
         address: usdcAddress,
         abi: erc20Artifact.abi,
         functionName: 'approve',
-        args: [tradeServiceAddress, maxUint256],
+        args: [tradeServiceAddress, amountInRaw],
       })
       onShowCallout({ content: 'Submitting order...', autoClose: false })
       const hash = await writeContractAsync({
@@ -326,7 +326,7 @@ export default function TradePanel({
         address: tokenAddress,
         abi: erc20Artifact.abi,
         functionName: 'approve',
-        args: [tradeServiceAddress, maxUint256],
+        args: [tradeServiceAddress, amountInRaw],
       })
       onShowCallout({ content: 'Submitting order...', autoClose: false })
       const hash = await writeContractAsync({
