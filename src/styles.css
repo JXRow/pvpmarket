@@ -135,6 +135,17 @@ button:active {
   background: rgba(255, 255, 255, 0.06);
 }
 
+.github-link {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-dim);
+  transition: color 0.2s ease;
+}
+
+.github-link:hover {
+  color: var(--text);
+}
+
 .network-btn:hover,
 .mobile-menu:hover {
   background: rgba(255, 255, 255, 0.1);

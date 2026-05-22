@@ -137,14 +137,6 @@ export default function App() {
       }))
   }, [address, isConnected])
 
-  function testTokensConfirm() {
-    showDialog({
-      title: 'Open Tokens',
-      content: 'Do you want to open the token list panel? This is a queued confirm dialog test.',
-      buttons: [{ text: 'Confirm' }, { text: 'Cancel' }],
-    })
-  }
-
   function closeToast(id) {
     setToasts((current) => current.map((toast) => (
       toast.id === id ? { ...toast, closing: true } : toast
@@ -178,10 +170,6 @@ export default function App() {
     }, 5000)
 
     toastTimers.current.set(id, timer)
-  }
-
-  function testPoolToast() {
-    showToast(`Pool message ${new Date().toLocaleTimeString()}`)
   }
 
   function clearCalloutTimers() {
@@ -222,20 +210,11 @@ export default function App() {
     calloutTimers.current.push(timer)
   }
 
-  function testActivityCallout() {
-    showCallout({
-      content: `Activity callout ${new Date().toLocaleTimeString()}. Click again to replace instantly.`,
-      autoClose: false,
-    })
-  }
-
   return (
     <div className="app-shell">
       <NavBar
         onConnect={connectWallet}
-        onTokens={testTokensConfirm}
-        onPool={testPoolToast}
-        onActivity={testActivityCallout}
+        onShowDialog={showDialog}
       />
       <main className="dashboard">
         <OrderBook orderbook={orderbook} />

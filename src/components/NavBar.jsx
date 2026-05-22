@@ -1,16 +1,23 @@
 import { Menu } from 'lucide-react'
 import ConnectWallet from './ConnectWallet'
 
-export default function NavBar({ onConnect, onTokens, onPool, onActivity }) {
+export default function NavBar({ onConnect, onShowDialog }) {
+  function handleComingSoon(feature) {
+    onShowDialog?.({
+      title: feature,
+      content: 'This feature is under development. Stay tuned!',
+      buttons: [{ text: 'OK' }],
+    })
+  }
+
   return (
     <header className="top-nav">
       <div className="nav-left">
         <a className="brand" href="#">PvP Market</a>
         <nav className="nav-links">
           <a className="active" href="#">Trade</a>
-          <a href="#" onClick={onTokens}>Tokens</a>
-          <a href="#" onClick={onPool}>Pool</a>
-          <a href="#" onClick={onActivity}>Activity</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); handleComingSoon('Listing') }}>listing</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); handleComingSoon('Docs') }}>docs</a>
         </nav>
       </div>
       <div className="nav-actions">
