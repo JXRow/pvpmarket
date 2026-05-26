@@ -39,7 +39,7 @@ export default function BuyPanel({
   }
 
   function handleAmountChange(e) {
-    const maxDecimals = balances.nativeDecimals ?? 18
+    const maxDecimals = balances.targetTokenDecimals ?? 18
     onAmountChange(cleanNumberInput(e.target.value, maxDecimals))
   }
 
@@ -47,7 +47,7 @@ export default function BuyPanel({
     const balance = Number(usdc)
     const p = Number(price)
     if (Number.isNaN(balance) || balance <= 0 || !p || p <= 0) return
-    const maxDecimals = balances.nativeDecimals ?? 18
+    const maxDecimals = balances.targetTokenDecimals ?? 18
     const factor = 10 ** maxDecimals
     const totalUsdc = balance * percent
     const value = Math.floor((totalUsdc / p) * factor) / factor

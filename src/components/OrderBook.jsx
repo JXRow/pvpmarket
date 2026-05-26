@@ -42,34 +42,42 @@ function applyDepth(rows, globalMaxTotal) {
   ])
 }
 
-export default function OrderBook({ orderbook = { asks, bids, pairInfo } }) {
+export default function OrderBook({ orderbook = { asks, bids, pairInfo }, marketSymbol }) {
   const mergedAsks = mergeRowsByPrice(orderbook.asks)
   const mergedBids = mergeRowsByPrice(orderbook.bids)
   const globalMaxTotal = Math.max(mergedAsks.maxTotal, mergedBids.maxTotal, 0)
   const asksWithDepth = applyDepth(mergedAsks.rows.slice(0, 6), globalMaxTotal)
   const bidsWithDepth = applyDepth(mergedBids.rows.slice(0, 6), globalMaxTotal)
+  const isEmpty = asksWithDepth.length === 0 && bidsWithDepth.length === 0
+  const pairName = orderbook.pairInfo.name === '--- -USDC' ? marketSymbol : orderbook.pairInfo.name
 
   return (
     <section className="card order-book">
       <div className="section-heading">
         <h2>Order Book</h2>
-        <span>{orderbook.pairInfo.name}</span>
+        <span>{pairName || '--- -USDC'}</span>
       </div>
-      <div className="book-header">
-        <span>Price</span>
-        <span>Size</span>
-        <span>Total</span>
-      </div>
-      <div className="book-side asks">
-        {asksWithDepth.map((row) => <OrderRow key={`${row[0]}-${row[1]}`} row={row} type="ask" />)}
-      </div>
-      <div className="spread-line">
-        <strong>{orderbook.pairInfo.spread}</strong>
-        <span><TrendingUp size={16} /> ${orderbook.pairInfo.spread}</span>
-      </div>
-      <div className="book-side bids">
-        {bidsWithDepth.map((row) => <OrderRow key={`${row[0]}-${row[1]}`} row={row} type="bid" />)}
-      </div>
+      {isEmpty ? (
+        <div className="orderbook-empty">Orderbook is empty</div>
+      ) : (
+        <>
+          <div className="book-header">
+            <span>Price</span>
+            <span>Size</span>
+            <span>Total</span>
+          </div>
+          <div className="book-side asks">
+            {asksWithDepth.map((row) => <OrderRow key={`${row[0]}-${row[1]}`} row={row} type="ask" />)}
+          </div>
+          <div className="spread-line">
+            <strong>{orderbook.pairInfo.spread}</strong>
+            <span><TrendingUp size={16} /> ${orderbook.pairInfo.spread}</span>
+          </div>
+          <div className="book-side bids">
+            {bidsWithDepth.map((row) => <OrderRow key={`${row[0]}-${row[1]}`} row={row} type="bid" />)}
+          </div>
+        </>
+      )}
     </section>
   )
 }

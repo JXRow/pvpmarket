@@ -15,6 +15,7 @@ import erc20Artifact from '../model/abi/MockERC20.json'
 
 export default function TradePanel({
   tokenSymbol = '---',
+  pairExists = true,
   onShowToast,
   onShowCallout,
   onHideCallout,
@@ -72,7 +73,7 @@ export default function TradePanel({
       <button
         className={`submit-trade ${isBuy ? 'buy' : 'sell'}`}
         onClick={handleSubmit}
-        disabled={submitting || tokenSymbol === '---' || !currentPairInfo.usdcAddress || !currentPairInfo.tokenAddress || !currentPairInfo.tradeServiceAddress}
+        disabled={submitting || tokenSymbol === '---'}
       >
         {submitting ? '...' : (tokenSymbol === '---' ? '---' : (isBuy ? `Buy ${tokenSymbol}` : `Sell ${tokenSymbol}`))}
       </button>
@@ -80,11 +81,33 @@ export default function TradePanel({
   )
 
   async function handleSubmit() {
+    if (pairExists === false || currentPairInfo.pairExists === false) {
+      showPairNotFoundDialog()
+      return
+    }
+
+    if (!currentPairInfo.usdcAddress || !currentPairInfo.tokenAddress || !currentPairInfo.tradeServiceAddress) {
+      onShowDialog({
+        title: 'Market Not Loaded',
+        content: 'Market contract information is still loading. Please try again later.',
+        buttons: [{ text: 'OK' }],
+      })
+      return
+    }
+
     if (isBuy) {
       await handleBuy()
     } else {
       await handleSell()
     }
+  }
+
+  function showPairNotFoundDialog() {
+    onShowDialog({
+      title: 'Trading Pair Not Found',
+      content: `${tokenSymbol}-USDC does not exist on the current TradeService contract yet. Please create the pair before placing orders.`,
+      buttons: [{ text: 'OK' }],
+    })
   }
 
   async function handleBuy() {

@@ -262,6 +262,15 @@ button:active {
   flex-direction: column-reverse;
 }
 
+.orderbook-empty {
+  display: grid;
+  min-height: 500px;
+  place-items: center;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+}
+
 .order-row {
   position: relative;
   display: grid;
@@ -660,6 +669,15 @@ button:active {
   height: 1px;
   background: rgba(255, 255, 255, 0.06);
   content: '';
+}
+
+.chart-unavailable {
+  display: grid;
+  min-height: 190px;
+  place-items: center;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .chart-line {

@@ -32,6 +32,7 @@ export default function App() {
   const refreshTimer = useRef(null)
   const chartRangeRef = useRef('24H')
   const initialWalletPromptShown = useRef(false)
+  const missingPairPrompted = useRef('')
   const { address, isConnected } = useAccount()
   const { openConnectModal } = useConnectModal()
   const [activeDialog, setActiveDialog] = useState(null)
@@ -158,7 +159,17 @@ export default function App() {
 
   useEffect(() => {
     function updateOrderbook() {
-      setOrderbook({ asks, bids, pairInfo })
+      const nextOrderbook = { asks, bids, pairInfo }
+      setOrderbook(nextOrderbook)
+
+      if (nextOrderbook.pairInfo.pairExists === false && missingPairPrompted.current !== nextOrderbook.pairInfo.name) {
+        missingPairPrompted.current = nextOrderbook.pairInfo.name
+        showDialog({
+          title: 'Trading Pair Not Found',
+          content: `${nextOrderbook.pairInfo.name} does not exist on the current TradeService contract yet. Please create the pair before placing orders.`,
+          buttons: [{ text: 'OK' }],
+        })
+      }
     }
 
     function updateUserOrders() {
@@ -262,6 +273,10 @@ export default function App() {
     calloutTimers.current.push(timer)
   }
 
+  const tradeTokenSymbol = marketInfo?.symbol?.split('-')[0]?.trim()
+    || orderbook.pairInfo.name.split('-')[0]?.trim()
+    || '---'
+
   return (
     <div className="app-shell">
       <NavBar
@@ -269,9 +284,10 @@ export default function App() {
         onShowDialog={showDialog}
       />
       <main className="dashboard">
-        <OrderBook orderbook={orderbook} />
+        <OrderBook orderbook={orderbook} marketSymbol={marketInfo?.symbol} />
         <TradePanel
-          tokenSymbol={orderbook.pairInfo.name.split('-')[0]?.trim() || '---'}
+          tokenSymbol={tradeTokenSymbol}
+          pairExists={orderbook.pairInfo.pairExists}
           onShowToast={showToast}
           onShowCallout={showCallout}
           onHideCallout={hideCallout}
@@ -293,7 +309,7 @@ export default function App() {
           onRefreshNow={refreshNow}
           userAddress={address}
           networkKey={parseMarketRoute().network}
-          tokenSymbol={orderbook.pairInfo.name.split('-')[0]?.trim() || '---'}
+          tokenSymbol={tradeTokenSymbol}
         />
       </main>
       <div className="ambient one" />

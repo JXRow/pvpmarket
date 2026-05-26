@@ -24,6 +24,10 @@ const chartIntervals = {
   '7D': { timeframe: 'hour', aggregate: 12, limit: 14 },
 }
 
+const missingOhlcvCache = new Set()
+const failedOhlcvCache = new Map()
+const FAILED_OHLCV_CACHE_MS = 5 * 60 * 1000
+
 export function parseMarketRoute(pathname = window.location.pathname) {
   const [, networkKey, tokenAddress] = pathname.split('/')
   const network = networks[networkKey] ? networkKey : 'monad'
@@ -223,9 +227,24 @@ export async function getChartData(networkKey, tokenAddress, range = '24H') {
   const pairAddress = pair?.pairAddress
   const geckoNetwork = geckoNetworks[networkKey] ?? networkKey
   const interval = chartIntervals[range] ?? chartIntervals['24H']
+  const ohlcvCacheKey = `${geckoNetwork}:${pairAddress}:${range}`
 
   if (!pairAddress) {
     return { tokenInfo, range, pair, points: [] }
+  }
+
+  const failedCacheTime = failedOhlcvCache.get(ohlcvCacheKey)
+  const shouldUseFallback = missingOhlcvCache.has(ohlcvCacheKey)
+    || (failedCacheTime && Date.now() - failedCacheTime < FAILED_OHLCV_CACHE_MS)
+
+  if (shouldUseFallback) {
+    return {
+      tokenInfo,
+      range,
+      pair,
+      points: buildPairTrendPoints(pair, range),
+      source: 'dexscreener-trend',
+    }
   }
 
   try {
@@ -236,7 +255,18 @@ export async function getChartData(networkKey, tokenAddress, range = '24H') {
     })
     const response = await fetch(`https://api.geckoterminal.com/api/v2/networks/${geckoNetwork}/pools/${pairAddress}/ohlcv/${interval.timeframe}?${params}`)
 
+    if (response.status === 404) {
+      missingOhlcvCache.add(ohlcvCacheKey)
+      throw new Error('Chart data not found')
+    }
+
+    if (response.status === 429) {
+      failedOhlcvCache.set(ohlcvCacheKey, Date.now())
+      throw new Error('Chart data rate limited')
+    }
+
     if (!response.ok) {
+      failedOhlcvCache.set(ohlcvCacheKey, Date.now())
       throw new Error('Failed to fetch chart data')
     }
 
@@ -254,6 +284,7 @@ export async function getChartData(networkKey, tokenAddress, range = '24H') {
       }
     }
   } catch {
+    failedOhlcvCache.set(ohlcvCacheKey, Date.now())
     return {
       tokenInfo,
       range,

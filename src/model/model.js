@@ -1,4 +1,4 @@
-import { createPublicClient, formatEther, formatUnits, getAddress, http, isAddress } from 'viem'
+import { createPublicClient, formatUnits, getAddress, http, isAddress } from 'viem'
 import { networks } from './const'
 import tradeServiceArtifact from './abi/TradeService.json'
 import monoTradeArtifact from './abi/MonoTrade.json'
@@ -36,20 +36,23 @@ export let pairInfo = {
   price: '---',
   change: '--',
   spread: '---',
+  pairExists: true,
 }
 
 export let balances = {
-  native: '---',
+  targetToken: '---',
   usdc: '---',
-  nativeDecimals: 18,
+  targetTokenDecimals: 18,
+  targetTokenSymbol: '---',
   usdcDecimals: 6,
 }
 
 export function clearUserData() {
   balances = {
-    native: '---',
+    targetToken: '---',
     usdc: '---',
-    nativeDecimals: 18,
+    targetTokenDecimals: 18,
+    targetTokenSymbol: '---',
     usdcDecimals: 6,
   }
   orders = []
@@ -194,6 +197,32 @@ export async function readOrderbook(networkKey, tokenAddress = ZERO_ADDRESS) {
   ])
   const usdcDecimals = usdcDecimalsRes.result
   const tokenInAddress = tokenInfo.isNative ? ZERO_ADDRESS : tokenInfo.address
+  const [tradeTokenUsdc, tradeUsdcToken] = await client.readContract({
+    address: tradeServiceAddress,
+    abi: tradeServiceArtifact.abi,
+    functionName: 'getPair',
+    args: [tokenInAddress, usdcAddress],
+  })
+  const pairExists = tradeTokenUsdc !== ZERO_ADDRESS && tradeUsdcToken !== ZERO_ADDRESS
+
+  if (!pairExists) {
+    bids = []
+    asks = []
+    pairInfo = {
+      ...pairInfo,
+      name: `${tokenInfo.symbol}-USDC`,
+      spread: '---',
+      tokenAddress: tokenInAddress,
+      tokenDecimals: tokenInfo.decimals,
+      usdcAddress,
+      usdcDecimals,
+      tradeServiceAddress,
+      pairExists,
+    }
+    emit(MODEL_EVENTS.ORDERBOOK_UPDATED, { asks, bids, pairInfo })
+    return
+  }
+
   const [nextBids, nextAsks] = await Promise.all([
     readPendingOrders(client, tradeServiceAddress, usdcAddress, tokenInAddress, usdcDecimals, tokenInfo.decimals, 'bid'),
     readPendingOrders(client, tradeServiceAddress, tokenInAddress, usdcAddress, tokenInfo.decimals, usdcDecimals, 'ask'),
@@ -210,6 +239,7 @@ export async function readOrderbook(networkKey, tokenAddress = ZERO_ADDRESS) {
     usdcAddress,
     usdcDecimals,
     tradeServiceAddress,
+    pairExists,
   }
 
   emit(MODEL_EVENTS.ORDERBOOK_UPDATED, { asks, bids, pairInfo })
@@ -391,7 +421,7 @@ export async function readUserOrders(networkKey, userAddress) {
   emit(MODEL_EVENTS.ORDER_HISTORY_UPDATED, orderHistory)
 }
 
-export async function readBalances(networkKey, userAddress) {
+export async function readBalances(networkKey, userAddress, tokenAddress = ZERO_ADDRESS) {
   const network = getNetwork(networkKey)
   const usdcAddress = network.contracts.usdc?.address
 
@@ -400,22 +430,31 @@ export async function readBalances(networkKey, userAddress) {
   }
 
   const client = createClient(networkKey)
-  const [usdcResults, nativeRawBalance] = await Promise.all([
+  const targetTokenInfo = await readTokenInfo(networkKey, tokenAddress)
+  const [usdcResults, targetRawBalance] = await Promise.all([
     client.multicall({
       contracts: [
         { address: usdcAddress, abi: erc20Artifact.abi, functionName: 'decimals' },
         { address: usdcAddress, abi: erc20Artifact.abi, functionName: 'balanceOf', args: [userAddress] },
       ],
     }),
-    client.getBalance({ address: userAddress }),
+    targetTokenInfo.isNative
+      ? client.getBalance({ address: userAddress })
+      : client.readContract({
+        address: targetTokenInfo.address,
+        abi: erc20Artifact.abi,
+        functionName: 'balanceOf',
+        args: [userAddress],
+      }),
   ])
   const usdcDecimals = usdcResults[0].result
   const usdcRawBalance = usdcResults[1].result
 
   balances = {
-    native: formatEther(nativeRawBalance),
+    targetToken: formatUnits(targetRawBalance, targetTokenInfo.decimals),
     usdc: formatUnits(usdcRawBalance, usdcDecimals),
-    nativeDecimals: network.nativeCurrency.decimals,
+    targetTokenDecimals: targetTokenInfo.decimals,
+    targetTokenSymbol: targetTokenInfo.symbol,
     usdcDecimals,
   }
 
@@ -427,7 +466,7 @@ export async function loadMarketModel({ networkKey, tokenAddress, userAddress })
     await Promise.all([
       readOrderbook(networkKey, tokenAddress),
       readUserOrders(networkKey, userAddress),
-      readBalances(networkKey, userAddress),
+      readBalances(networkKey, userAddress, tokenAddress),
     ])
   } catch (error) {
     emit(MODEL_EVENTS.ERROR, error)

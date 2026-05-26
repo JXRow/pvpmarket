@@ -15,9 +15,11 @@ const monad = defineChain({
   contracts: networks.monad.contracts,
 })
 
+const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || 'YOUR_WALLETCONNECT_PROJECT_ID'
+
 export const config = getDefaultConfig({
   appName: 'PvP Market',
-  projectId: 'YOUR_WALLETCONNECT_PROJECT_ID',
+  projectId,
   chains: [monad],
   transports: {
     [monad.id]: http(),

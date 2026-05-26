@@ -10,15 +10,18 @@ export default function SellPanel({
   onPriceChange,
   onAmountChange,
 }) {
-  const [native, setNative] = useState('--')
+  const [targetToken, setTargetToken] = useState('--')
+  const [targetTokenSymbol, setTargetTokenSymbol] = useState(tokenSymbol)
 
   useEffect(() => {
-    if (balances.native !== '---') {
-      setNative(balances.native)
+    if (balances.targetToken !== '---') {
+      setTargetToken(balances.targetToken)
+      setTargetTokenSymbol(balances.targetTokenSymbol)
     }
 
     function updateBalances() {
-      setNative(balances.native)
+      setTargetToken(balances.targetToken)
+      setTargetTokenSymbol(balances.targetTokenSymbol)
     }
 
     modelEvents.addEventListener(MODEL_EVENTS.BALANCES_UPDATED, updateBalances)
@@ -39,14 +42,14 @@ export default function SellPanel({
   }
 
   function handleAmountChange(e) {
-    const maxDecimals = balances.nativeDecimals ?? 18
+    const maxDecimals = balances.targetTokenDecimals ?? 18
     onAmountChange(cleanNumberInput(e.target.value, maxDecimals))
   }
 
   function setAmountPercent(percent) {
-    const balance = Number(native)
+    const balance = Number(targetToken)
     if (Number.isNaN(balance) || balance <= 0) return
-    const maxDecimals = balances.nativeDecimals ?? 18
+    const maxDecimals = balances.targetTokenDecimals ?? 18
     const factor = 10 ** maxDecimals
     const value = Math.floor(balance * percent * factor) / factor
     onAmountChange(value.toString())
@@ -55,7 +58,7 @@ export default function SellPanel({
   return (
     <>
       <div className="balance-line">
-        <span>Avail: {formatNumber(native)} MON</span>
+        <span>Avail: {formatNumber(targetToken)} {targetTokenSymbol || tokenSymbol}</span>
         <Wallet size={16} />
       </div>
       <div className="field-stack">
