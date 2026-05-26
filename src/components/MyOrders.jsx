@@ -7,10 +7,6 @@ import {
   modelEvents,
   MODEL_EVENTS,
   createClient,
-  readUserOrders,
-  readOrderbook,
-  readBalances,
-  parseMarketRoute,
 } from '../model/model'
 import monoTradeArtifact from '../model/abi/MonoTrade.json'
 
@@ -21,6 +17,7 @@ export default function MyOrders({
   onShowCallout,
   onHideCallout,
   onShowDialog,
+  onRefreshNow,
   userAddress,
   networkKey,
   tokenSymbol = '---',
@@ -71,12 +68,7 @@ export default function MyOrders({
       await client.waitForTransactionReceipt({ hash, confirmations: 1 })
 
       onShowCallout({ content: 'Transaction confirmed', autoClose: true })
-      const { token: tokenAddress } = parseMarketRoute()
-      await Promise.all([
-        readUserOrders(networkKey, userAddress),
-        readOrderbook(networkKey, tokenAddress),
-        readBalances(networkKey, userAddress),
-      ])
+      await onRefreshNow?.()
     } catch (err) {
       const isRejected =
         err.name === 'UserRejectedRequestError' ||

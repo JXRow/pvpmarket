@@ -6,10 +6,6 @@ import SellPanel from './SellPanel'
 import {
   pairInfo,
   createClient,
-  readOrderbook,
-  readUserOrders,
-  readBalances,
-  parseMarketRoute,
   modelEvents,
   MODEL_EVENTS,
   ZERO_ADDRESS,
@@ -23,6 +19,7 @@ export default function TradePanel({
   onShowCallout,
   onHideCallout,
   onShowDialog,
+  onRefreshNow,
   userAddress,
   networkKey,
 }) {
@@ -138,12 +135,7 @@ export default function TradePanel({
         ],
       })
       onShowCallout({ content: 'Transaction confirmed', autoClose: true })
-      const { token } = parseMarketRoute()
-      await Promise.all([
-        readUserOrders(networkKey, userAddress),
-        readOrderbook(networkKey, token),
-        readBalances(networkKey, userAddress),
-      ])
+      await onRefreshNow?.()
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('sendCallsAsync error:', err)
@@ -238,12 +230,7 @@ export default function TradePanel({
       }
 
       onShowCallout({ content: 'Transaction confirmed', autoClose: true })
-      const { token } = parseMarketRoute()
-      await Promise.all([
-        readUserOrders(networkKey, userAddress),
-        readOrderbook(networkKey, token),
-        readBalances(networkKey, userAddress),
-      ])
+      await onRefreshNow?.()
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('sell error:', err)
@@ -295,12 +282,7 @@ export default function TradePanel({
       const client = createClient(networkKey)
       await client.waitForTransactionReceipt({ hash, confirmations: 1 })
       onShowCallout({ content: 'Transaction confirmed', autoClose: true })
-      const { token } = parseMarketRoute()
-      await Promise.all([
-        readUserOrders(networkKey, userAddress),
-        readOrderbook(networkKey, token),
-        readBalances(networkKey, userAddress),
-      ])
+      await onRefreshNow?.()
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('fallbackBuy error:', err)
@@ -338,12 +320,7 @@ export default function TradePanel({
       const client = createClient(networkKey)
       await client.waitForTransactionReceipt({ hash, confirmations: 1 })
       onShowCallout({ content: 'Transaction confirmed', autoClose: true })
-      const { token } = parseMarketRoute()
-      await Promise.all([
-        readUserOrders(networkKey, userAddress),
-        readOrderbook(networkKey, token),
-        readBalances(networkKey, userAddress),
-      ])
+      await onRefreshNow?.()
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('fallbackSell error:', err)

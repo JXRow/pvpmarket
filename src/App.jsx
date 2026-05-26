@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Activity } from 'lucide-react'
 import { useConnectModal } from '@rainbow-me/rainbowkit'
 import { useAccount } from 'wagmi'
@@ -12,7 +12,7 @@ import MyOrders from './components/MyOrders'
 import ToastStack from './components/ToastStack'
 import CalloutNotice from './components/CalloutNotice'
 import PromptDialog from './components/PromptDialog'
-import { getMarketInfo } from './model/api'
+import { getChartData, getMarketInfo } from './model/api'
 import {
   MODEL_EVENTS,
   asks,
@@ -29,6 +29,8 @@ export default function App() {
   const dialogQueue = useRef([])
   const toastTimers = useRef(new Map())
   const calloutTimers = useRef([])
+  const refreshTimer = useRef(null)
+  const chartRangeRef = useRef('24H')
   const initialWalletPromptShown = useRef(false)
   const { address, isConnected } = useAccount()
   const { openConnectModal } = useConnectModal()
@@ -37,8 +39,66 @@ export default function App() {
   const [toasts, setToasts] = useState([])
   const [callout, setCallout] = useState(null)
   const [marketInfo, setMarketInfo] = useState(null)
+  const [chartData, setChartData] = useState(null)
+  const [chartRange, setChartRange] = useState('24H')
   const [orderbook, setOrderbook] = useState({ asks, bids, pairInfo })
   const [userOrders, setUserOrders] = useState(orders)
+
+  const refreshMarketData = useCallback(async () => {
+    if (!isConnected || !address) {
+      return
+    }
+
+    const { network, token } = parseMarketRoute()
+    const currentChartRange = chartRangeRef.current
+
+    await Promise.all([
+      loadMarketModel({ networkKey: network, tokenAddress: token, userAddress: address }),
+      getMarketInfo(network, token)
+        .then(setMarketInfo)
+        .catch(() => setMarketInfo({
+          icon: '---',
+          symbol: '---',
+          priceUsd: '---',
+          change24h: '--',
+          volume24hUsd: '---',
+          liquidity: '---',
+          marketCap: '---',
+          fdv: '---',
+        })),
+      getChartData(network, token, currentChartRange)
+        .then((data) => {
+          if (data?.range === chartRangeRef.current) {
+            setChartData(data)
+          }
+        })
+        .catch(() => {
+          if (currentChartRange === chartRangeRef.current) {
+            setChartData(null)
+          }
+        }),
+    ])
+  }, [address, isConnected])
+
+  const scheduleRefresh = useCallback(() => {
+    window.clearTimeout(refreshTimer.current)
+    refreshTimer.current = window.setTimeout(async () => {
+      await refreshMarketData()
+      scheduleRefresh()
+    }, 3000)
+  }, [refreshMarketData])
+
+  const refreshNow = useCallback(async () => {
+    window.clearTimeout(refreshTimer.current)
+    await refreshMarketData()
+    scheduleRefresh()
+  }, [refreshMarketData, scheduleRefresh])
+
+  const changeChartRange = useCallback((range) => {
+    chartRangeRef.current = range
+    setChartRange(range)
+    refreshNow()
+  }, [refreshNow])
 
   function showDialog(dialog) {
     const nextDialog = {
@@ -118,24 +178,16 @@ export default function App() {
     if (!isConnected || !address) {
       clearUserData()
       setMarketInfo(null)
+      setChartData(null)
       return
     }
 
-    const { network, token } = parseMarketRoute()
-    loadMarketModel({ networkKey: network, tokenAddress: token, userAddress: address })
-    getMarketInfo(network, token)
-      .then(setMarketInfo)
-      .catch(() => setMarketInfo({
-        icon: '---',
-        symbol: '---',
-        priceUsd: '---',
-        change24h: '--',
-        volume24hUsd: '---',
-        liquidity: '---',
-        marketCap: '---',
-        fdv: '---',
-      }))
-  }, [address, isConnected])
+    refreshNow()
+
+    return () => {
+      window.clearTimeout(refreshTimer.current)
+    }
+  }, [address, isConnected, refreshNow])
 
   function closeToast(id) {
     setToasts((current) => current.map((toast) => (
@@ -224,12 +276,13 @@ export default function App() {
           onShowCallout={showCallout}
           onHideCallout={hideCallout}
           onShowDialog={showDialog}
+          onRefreshNow={refreshNow}
           userAddress={address}
           networkKey={parseMarketRoute().network}
         />
         <aside className="right-column">
           <MarketStats marketInfo={marketInfo} />
-          <ChartPanel />
+          <ChartPanel chartData={chartData} chartRange={chartRange} onRangeChange={changeChartRange} />
         </aside>
         <MyOrders
           orders={userOrders}
@@ -237,6 +290,7 @@ export default function App() {
           onShowCallout={showCallout}
           onHideCallout={hideCallout}
           onShowDialog={showDialog}
+          onRefreshNow={refreshNow}
           userAddress={address}
           networkKey={parseMarketRoute().network}
           tokenSymbol={orderbook.pairInfo.name.split('-')[0]?.trim() || '---'}
