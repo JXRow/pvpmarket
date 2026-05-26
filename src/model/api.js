@@ -20,7 +20,7 @@ const geckoNetworks = {
 
 const chartIntervals = {
   '1H': { timeframe: 'minute', aggregate: 5, limit: 12 },
-  '24H': { timeframe: 'hour', aggregate: 2, limit: 12 },
+  '24H': { timeframe: 'hour', aggregate: 1, limit: 24 },
   '7D': { timeframe: 'hour', aggregate: 12, limit: 14 },
 }
 
@@ -177,6 +177,19 @@ async function getDexScreenerPair(networkKey, tokenInfo) {
     ?? null
 }
 
+async function fetchGeckoOhlcv(geckoNetwork, pairAddress, interval, includeCurrency = false) {
+  const params = new URLSearchParams({
+    aggregate: `${interval.aggregate}`,
+    limit: `${interval.limit}`,
+  })
+
+  if (includeCurrency) {
+    params.set('currency', 'usd')
+  }
+
+  return fetch(`https://api.geckoterminal.com/api/v2/networks/${geckoNetwork}/pools/${pairAddress.toLowerCase()}/ohlcv/${interval.timeframe}?${params}`)
+}
+
 function normalizeOhlcvList(ohlcvList) {
   return ohlcvList
     .map((item) => ({
@@ -248,12 +261,11 @@ export async function getChartData(networkKey, tokenAddress, range = '24H') {
   }
 
   try {
-    const params = new URLSearchParams({
-      aggregate: `${interval.aggregate}`,
-      limit: `${interval.limit}`,
-      currency: 'usd',
-    })
-    const response = await fetch(`https://api.geckoterminal.com/api/v2/networks/${geckoNetwork}/pools/${pairAddress}/ohlcv/${interval.timeframe}?${params}`)
+    let response = await fetchGeckoOhlcv(geckoNetwork, pairAddress, interval)
+
+    if (response.status === 400) {
+      response = await fetchGeckoOhlcv(geckoNetwork, pairAddress, interval, true)
+    }
 
     if (response.status === 404) {
       missingOhlcvCache.add(ohlcvCacheKey)
